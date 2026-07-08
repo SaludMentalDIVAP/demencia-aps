@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Demencias en APS – DIVAP MINSAL</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --azul-oscuro:#25306B;
+  --azul:#005F9E;
+  --rojo:#C0392B;
+  --gris-claro:#f4f6f9;
+  --gris-borde:#dce1ea;
+  --texto:#222;
+  --blanco:#fff;
+  --sombra:0 2px 8px rgba(0,0,0,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-claro);color:var(--texto);font-size:14px}
+
+/* HEADER */
+#header{background:var(--azul-oscuro);color:var(--blanco);padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+#header img{height:52px;flex-shrink:0}
+#header-texto h1{font-size:1.15rem;font-weight:700;line-height:1.25}
+#header-texto p{font-size:.82rem;opacity:.85;margin-top:2px}
+
+/* FILTROS */
+#filtros{background:var(--blanco);border-bottom:2px solid var(--azul);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.filtro-grupo{display:flex;flex-direction:column;gap:3px;min-width:130px;flex:1}
+.filtro-grupo label{font-size:.75rem;font-weight:600;color:var(--azul-oscuro);text-transform:uppercase;letter-spacing:.03em}
+.filtro-grupo select{border:1.5px solid var(--gris-borde);border-radius:5px;padding:5px 8px;font-size:.82rem;background:var(--blanco);color:var(--texto);cursor:pointer}
+.filtro-grupo select:focus{outline:none;border-color:var(--azul)}
+#btn-limpiar{background:var(--rojo);color:var(--blanco);border:none;border-radius:5px;padding:6px 14px;font-size:.82rem;font-weight:600;cursor:pointer;align-self:flex-end;white-space:nowrap}
+#btn-limpiar:hover{background:#a93226}
+
+/* KPIs */
+#kpis{display:flex;flex-wrap:wrap;gap:12px;padding:14px 16px;background:var(--blanco);border-bottom:1px solid var(--gris-borde)}
+.kpi{flex:1;min-width:130px;background:var(--gris-claro);border-radius:8px;padding:12px 14px;border-left:4px solid var(--azul)}
+.kpi-valor{font-size:1.6rem;font-weight:700;color:var(--azul-oscuro);line-height:1}
+.kpi-label{font-size:.75rem;color:#555;margin-top:4px}
+.kpi-sub{font-size:.72rem;color:#888;margin-top:2px}
+
+/* CONTEXTO */
+#contexto-filtros{background:var(--azul-oscuro);color:var(--blanco);font-size:.78rem;padding:5px 16px;opacity:.9}
+
+/* TABS */
+#tabs{display:flex;background:var(--blanco);border-bottom:2px solid var(--azul-oscuro);padding:0 16px;gap:4px;overflow-x:auto}
+.tab{padding:10px 16px;cursor:pointer;font-size:.82rem;font-weight:600;color:#666;border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s}
+.tab:hover{color:var(--azul)}
+.tab.activo{color:var(--azul-oscuro);border-bottom-color:var(--azul-oscuro)}
+
+/* CONTENIDO */
+#contenido{padding:16px;display:flex;flex-direction:column;gap:16px}
+.panel{display:none}
+.panel.activo{display:block}
+
+/* GRILLA GRÁFICOS */
+.grilla-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grilla-1{display:grid;grid-template-columns:1fr;gap:14px}
+@media(max-width:700px){.grilla-2{grid-template-columns:1fr}}
+
+/* TARJETA GRÁFICO */
+.tarjeta{background:var(--blanco);border-radius:10px;box-shadow:var(--sombra);padding:14px 16px;position:relative}
+.tarjeta h3{font-size:.88rem;font-weight:700;color:var(--azul-oscuro);margin-bottom:2px}
+.tarjeta .subtitulo{font-size:.75rem;color:#666;margin-bottom:10px;min-height:16px}
+.btn-png{position:absolute;top:12px;right:12px;background:var(--azul);color:var(--blanco);border:none;border-radius:4px;padding:4px 9px;font-size:.72rem;cursor:pointer;opacity:.7;transition:opacity .2s}
+.btn-png:hover{opacity:1}
+.canvas-wrap{position:relative;height:260px}
+.canvas-wrap canvas{width:100%!important}
+
+/* MAPA */
+#mapa-wrap{background:var(--blanco);border-radius:10px;box-shadow:var(--sombra);overflow:hidden}
+#mapa{height:480px;width:100%}
+@media(max-width:700px){#mapa{height:320px}}
+
+/* TABLA */
+.tabla-wrap{background:var(--blanco);border-radius:10px;box-shadow:var(--sombra);overflow:auto;max-height:500px}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+thead th{background:var(--azul-oscuro);color:var(--blanco);padding:8px 10px;text-align:left;position:sticky;top:0;z-index:1;white-space:nowrap}
+tbody tr:nth-child(even){background:#f8f9fc}
+tbody td{padding:6px 10px;border-bottom:1px solid var(--gris-borde)}
+tbody tr:hover{background:#e8edf5}
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.7rem;font-weight:600;background:var(--azul);color:var(--blanco)}
+
+/* FICHA TERRITORIO */
+#ficha-territorio{background:var(--blanco);border-radius:10px;box-shadow:var(--sombra);padding:16px}
+#ficha-territorio h2{font-size:1rem;color:var(--azul-oscuro);font-weight:700;margin-bottom:12px;border-bottom:2px solid var(--azul-oscuro);padding-bottom:6px}
+.ficha-kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.ficha-kpi{flex:1;min-width:120px;background:var(--gris-claro);border-radius:7px;padding:10px 12px;border-left:3px solid var(--rojo)}
+.ficha-kpi-val{font-size:1.3rem;font-weight:700;color:var(--azul-oscuro)}
+.ficha-kpi-lbl{font-size:.72rem;color:#555;margin-top:2px}
+.mini-chart-wrap{height:160px;position:relative}
+#sin-seleccion{color:#888;font-size:.9rem;padding:20px 0;text-align:center}
+
+/* LOADING */
+#loading{position:fixed;inset:0;background:rgba(37,48,107,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:var(--blanco)}
+#loading p{margin-top:14px;font-size:1rem;opacity:.9}
+.spinner{width:44px;height:44px;border:4px solid rgba(255,255,255,.3);border-top-color:var(--blanco);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* RESPONSIVE FIXES */
+@media(max-width:500px){
+  #header{padding:8px 12px}
+  #header img{height:38px}
+  #header-texto h1{font-size:1rem}
+  .kpi-valor{font-size:1.3rem}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><p>Cargando datos…</p></div>
+
+<div id="header">
+  <img id="logo-minsal" src="" alt="MINSAL"/>
+  <div id="header-texto">
+    <h1>Dashboard de Abordaje de las Demencias en Atención Primaria de Salud</h1>
+    <p>División de Atención Primaria (DIVAP) · Ministerio de Salud de Chile</p>
+  </div>
+</div>
+
+<div id="filtros">
+  <div class="filtro-grupo">
+    <label>Año</label>
+    <select id="f-anio"><option value="">Todos los años</option></select>
+  </div>
+  <div class="filtro-grupo">
+    <label>Servicio de Salud</label>
+    <select id="f-ss"><option value="">Todos</option></select>
+  </div>
+  <div class="filtro-grupo">
+    <label>Comuna</label>
+    <select id="f-comuna"><option value="">Todas</option></select>
+  </div>
+  <div class="filtro-grupo">
+    <label>Establecimiento</label>
+    <select id="f-estab"><option value="">Todos</option></select>
+  </div>
+  <div class="filtro-grupo">
+    <label>Tipo</label>
+    <select id="f-tipo"><option value="">Todos</option></select>
+  </div>
+  <div class="filtro-grupo">
+    <label>Dependencia</label>
+    <select id="f-dep"><option value="">Todas</option></select>
+  </div>
+  <button id="btn-limpiar">✕ Limpiar filtros</button>
+</div>
+
+<div id="contexto-filtros">Mostrando: Todo el país · Todos los años</div>
+
+<div id="kpis">
+  <div class="kpi"><div class="kpi-valor" id="kpi-pbc">–</div><div class="kpi-label">Población Bajo Control</div><div class="kpi-sub" id="kpi-pbc-sub"></div></div>
+  <div class="kpi"><div class="kpi-valor" id="kpi-estabs">–</div><div class="kpi-label">Establecimientos</div><div class="kpi-sub" id="kpi-estabs-sub"></div></div>
+  <div class="kpi"><div class="kpi-valor" id="kpi-comunas">–</div><div class="kpi-label">Comunas</div><div class="kpi-sub"></div></div>
+  <div class="kpi"><div class="kpi-valor" id="kpi-ss">–</div><div class="kpi-label">Servicios de Salud</div><div class="kpi-sub"></div></div>
+  <div class="kpi"><div class="kpi-valor" id="kpi-variacion">–</div><div class="kpi-label">Variación 2014→2016</div><div class="kpi-sub" id="kpi-var-sub"></div></div>
+</div>
+
+<div id="tabs">
+  <div class="tab activo" data-panel="panel-nacional">📊 Nacional</div>
+  <div class="tab" data-panel="panel-territorio">📋 Por Territorio</div>
+  <div class="tab" data-panel="panel-mapa">🗺️ Mapa</div>
+  <div class="tab" data-panel="panel-tabla">📄 Tabla</div>
+</div>
+
+<div id="contenido">
+
+  <!-- PANEL NACIONAL -->
+  <div class="panel activo" id="panel-nacional">
+    <div class="grilla-2">
+      <div class="tarjeta">
+        <h3>Población Bajo Control de Demencias por Año</h3>
+        <div class="subtitulo" id="sub-evolucion"></div>
+        <button class="btn-png" onclick="descargarPNG('chart-evolucion','Evolución PBC Demencias')">⬇ PNG</button>
+        <div class="canvas-wrap"><canvas id="chart-evolucion"></canvas></div>
+      </div>
+      <div class="tarjeta">
+        <h3>PBC por Servicio de Salud</h3>
+        <div class="subtitulo" id="sub-ss"></div>
+        <button class="btn-png" onclick="descargarPNG('chart-ss','PBC por Servicio de Salud')">⬇ PNG</button>
+        <div class="canvas-wrap"><canvas id="chart-ss"></canvas></div>
+      </div>
+      <div class="tarjeta">
+        <h3>PBC por Tipo de Establecimiento</h3>
+        <div class="subtitulo" id="sub-tipo"></div>
+        <button class="btn-png" onclick="descargarPNG('chart-tipo','PBC por Tipo de Establecimiento')">⬇ PNG</button>
+        <div class="canvas-wrap"><canvas id="chart-tipo"></canvas></div>
+      </div>
+      <div class="tarjeta">
+        <h3>PBC por Dependencia</h3>
+        <div class="subtitulo" id="sub-dep"></div>
+        <button class="btn-png" onclick="descargarPNG('chart-dep','PBC por Dependencia')">⬇ PNG</button>
+        <div class="canvas-wrap"><canvas id="chart-dep"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL TERRITORIO -->
+  <div class="panel" id="panel-territorio">
+    <div id="ficha-territorio">
+      <div id="sin-seleccion">Selecciona un Servicio de Salud, Comuna o Establecimiento en los filtros para ver la ficha de territorio.</div>
+      <div id="ficha-contenido" style="display:none">
+        <h2 id="ficha-titulo"></h2>
+        <div class="ficha-kpis">
+          <div class="ficha-kpi"><div class="ficha-kpi-val" id="ft-pbc">–</div><div class="ficha-kpi-lbl">Total PBC (último año)</div></div>
+          <div class="ficha-kpi"><div class="ficha-kpi-val" id="ft-estabs">–</div><div class="ficha-kpi-lbl">Establecimientos</div></div>
+          <div class="ficha-kpi"><div class="ficha-kpi-val" id="ft-prom">–</div><div class="ficha-kpi-lbl">PBC Promedio por establec.</div></div>
+          <div class="ficha-kpi"><div class="ficha-kpi-val" id="ft-var">–</div><div class="ficha-kpi-lbl">Variación 2014→2016</div></div>
+        </div>
+        <div class="grilla-2">
+          <div class="tarjeta">
+            <h3>Evolución PBC</h3>
+            <div class="mini-chart-wrap"><canvas id="mini-evolucion"></canvas></div>
+          </div>
+          <div class="tarjeta">
+            <h3>Distribución por Tipo</h3>
+            <div class="mini-chart-wrap"><canvas id="mini-tipo"></canvas></div>
+          </div>
+        </div>
+        <div class="tarjeta" style="margin-top:14px">
+          <h3>Top Establecimientos</h3>
+          <div class="tabla-wrap" style="max-height:300px">
+            <table id="tabla-top">
+              <thead><tr><th>Establecimiento</th><th>Tipo</th><th>2014</th><th>2015</th><th>2016</th></tr></thead>
+              <tbody id="tbody-top"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL MAPA -->
+  <div class="panel" id="panel-mapa">
+    <div id="mapa-wrap">
+      <div id="mapa"></div>
+    </div>
+  </div>
+
+  <!-- PANEL TABLA -->
+  <div class="panel" id="panel-tabla">
+    <div class="tabla-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Establecimiento</th>
+            <th>Tipo</th>
+            <th>Dependencia</th>
+            <th>Comuna</th>
+            <th>Servicio de Salud</th>
+            <th>PBC 2014</th>
+            <th>PBC 2015</th>
+            <th>PBC 2016</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-tabla"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- fin contenido -->
+
+<script>
+// ─── LOGO MINSAL ────────────────────────────────────────────────
+(function(){
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 60">
+    <rect width="160" height="60" fill="#25306B" rx="6"/>
+    <text x="80" y="22" font-family="Arial" font-size="11" font-weight="bold" fill="white" text-anchor="middle">MINISTERIO DE SALUD</text>
+    <text x="80" y="36" font-family="Arial" font-size="9" fill="#aab4d8" text-anchor="middle">República de Chile</text>
+    <rect x="70" y="42" width="20" height="3" fill="#C0392B" rx="1"/>
+    <rect x="78" y="34" width="4" height="19" fill="white" rx="1"/>
+    <rect x="72" y="40" width="16" height="4" fill="white" rx="1"/>
+  </svg>`;
+  document.getElementById('logo-minsal').src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+})();
+
+// ─── ESTADO GLOBAL ──────────────────────────────────────────────
+let DATA = null;
+let charts = {};
+let mapaLeaflet = null;
+let marcadores = [];
+let miniCharts = {};
+
+const COLORES = ['#005F9E','#25306B','#C0392B','#2980b9','#8e44ad','#16a085','#e67e22','#27ae60'];
+const AZUL = '#005F9E';
+const ROJO = '#C0392B';
+
+// ─── CARGA DE DATOS ─────────────────────────────────────────────
+fetch('datos.json')
+  .then(r => r.json())
+  .then(d => {
+    DATA = d;
+    inicializar();
+    document.getElementById('loading').style.display = 'none';
+  })
+  .catch(e => {
+    document.getElementById('loading').innerHTML = '<p style="color:#f88">Error al cargar datos.json</p>';
+  });
+
+// ─── INICIALIZAR ────────────────────────────────────────────────
+function inicializar() {
+  poblarFiltros();
+  actualizarTodo();
+  bindEventos();
+}
+
+function poblarFiltros() {
+  const años = DATA.meta.años;
+  const fAnio = document.getElementById('f-anio');
+  años.forEach(a => {
+    const o = document.createElement('option');
+    o.value = a; o.textContent = a;
+    fAnio.appendChild(o);
+  });
+
+  DATA.lookup.ss.forEach((ss, i) => agregarOpcion('f-ss', i, ss));
+  DATA.lookup.tipos.forEach((t, i) => agregarOpcion('f-tipo', i, t));
+  DATA.lookup.dependencias.forEach((d, i) => agregarOpcion('f-dep', i, d));
+}
+
+function agregarOpcion(id, val, texto) {
+  const o = document.createElement('option');
+  o.value = val; o.textContent = texto;
+  document.getElementById(id).appendChild(o);
+}
+
+// ─── FILTROS EN CASCADA ─────────────────────────────────────────
+function getFiltros() {
+  return {
+    anio: document.getElementById('f-anio').value,
+    ss: document.getElementById('f-ss').value,
+    comuna: document.getElementById('f-comuna').value,
+    estab: document.getElementById('f-estab').value,
+    tipo: document.getElementById('f-tipo').value,
+    dep: document.getElementById('f-dep').value
+  };
+}
+
+function getEstabsFiltrados() {
+  const f = getFiltros();
+  return DATA.establecimientos.filter(e => {
+    if (f.ss !== '' && e[2] != f.ss) return false;
+    if (f.comuna !== '' && e[3] != f.comuna) return false;
+    if (f.estab !== '' && e[0] != f.estab) return false;
+    if (f.tipo !== '' && e[4] != f.tipo) return false;
+    if (f.dep !== '' && e[5] != f.dep) return false;
+    return true;
+  });
+}
+
+function getPBCEstab(e, anio) {
+  if (anio) return e[9][anio] || 0;
+  return DATA.meta.años.reduce((s, a) => s + (e[9][a] || 0), 0);
+}
+
+function getPBCEstabAnio(e, anio) {
+  return e[9][anio] || 0;
+}
+
+function actualizarComunasYEstabs(estabs) {
+  const f = getFiltros();
+  const comunasDisp = [...new Set(estabs.map(e => e[3]))].sort((a,b) => {
+    return DATA.lookup.comunas[a].localeCompare(DATA.lookup.comunas[b]);
+  });
+  const estabsDisp = estabs;
+
+  const fCom = document.getElementById('f-comuna');
+  const fEst = document.getElementById('f-estab');
+  const comVal = fCom.value;
+  const estVal = fEst.value;
+
+  fCom.innerHTML = '<option value="">Todas</option>';
+  comunasDisp.forEach(ci => {
+    const o = document.createElement('option');
+    o.value = ci; o.textContent = DATA.lookup.comunas[ci];
+    if (ci == comVal) o.selected = true;
+    fCom.appendChild(o);
+  });
+
+  fEst.innerHTML = '<option value="">Todos</option>';
+  estabsDisp.forEach(e => {
+    const o = document.createElement('option');
+    o.value = e[0]; o.textContent = e[1];
+    if (e[0] == estVal) o.selected = true;
+    fEst.appendChild(o);
+  });
+}
+
+// ─── CONTEXTO TEXTO ─────────────────────────────────────────────
+function textoContexto() {
+  const f = getFiltros();
+  let parts = [];
+  if (f.anio) parts.push('Año ' + f.anio);
+  else parts.push('Todos los años (2014–2016)');
+  if (f.ss !== '') parts.push(DATA.lookup.ss[f.ss]);
+  else parts.push('Todo el país');
+  if (f.comuna !== '') parts.push('Comuna: ' + DATA.lookup.comunas[f.comuna]);
+  if (f.estab !== '') {
+    const e = DATA.establecimientos.find(x => x[0] == f.estab);
+    if (e) parts.push(e[1]);
+  }
+  if (f.tipo !== '') parts.push('Tipo: ' + DATA.lookup.tipos[f.tipo]);
+  if (f.dep !== '') parts.push('Dep.: ' + DATA.lookup.dependencias[f.dep]);
+  return parts.join(' · ');
+}
+
+// ─── KPIs ───────────────────────────────────────────────────────
+function actualizarKPIs(estabs) {
+  const f = getFiltros();
+  const años = DATA.meta.años;
+
+  let totalPBC = 0;
+  if (f.anio) {
+    estabs.forEach(e => totalPBC += (e[9][f.anio] || 0));
+  } else {
+    // Suma del último año disponible
+    const ultimoAnio = años[años.length - 1];
+    estabs.forEach(e => totalPBC += (e[9][ultimoAnio] || 0));
+  }
+
+  const nEstabs = estabs.length;
+  const nComunas = new Set(estabs.map(e => e[3])).size;
+  const nSS = new Set(estabs.map(e => e[2])).size;
+
+  // Variación 2014→2016
+  let pbc14 = 0, pbc16 = 0;
+  estabs.forEach(e => {
+    pbc14 += (e[9]['2014'] || 0);
+    pbc16 += (e[9]['2016'] || 0);
+  });
+  let variacion = pbc14 > 0 ? Math.round(((pbc16 - pbc14) / pbc14) * 100) : null;
+
+  document.getElementById('kpi-pbc').textContent = totalPBC.toLocaleString('es-CL');
+  document.getElementById('kpi-pbc-sub').textContent = f.anio ? 'Año ' + f.anio : 'Año 2016';
+  document.getElementById('kpi-estabs').textContent = nEstabs.toLocaleString('es-CL');
+  document.getElementById('kpi-estabs-sub').textContent = 'con PBC > 1';
+  document.getElementById('kpi-comunas').textContent = nComunas.toLocaleString('es-CL');
+  document.getElementById('kpi-ss').textContent = nSS.toLocaleString('es-CL');
+  if (variacion !== null) {
+    const signo = variacion >= 0 ? '+' : '';
+    document.getElementById('kpi-variacion').textContent = signo + variacion + '%';
+    document.getElementById('kpi-var-sub').textContent = pbc14 + ' → ' + pbc16;
+  } else {
+    document.getElementById('kpi-variacion').textContent = 'N/D';
+    document.getElementById('kpi-var-sub').textContent = '';
+  }
+}
+
+// ─── GRÁFICOS ───────────────────────────────────────────────────
+function crearOActualizar(id, tipo, labels, datasets, opciones) {
+  const canvas = document.getElementById(id);
+  if (charts[id]) { charts[id].destroy(); }
+  charts[id] = new Chart(canvas, {
+    type: tipo,
+    data: { labels, datasets },
+    options: { ...opcionesBase(), ...opciones }
+  });
+}
+
+function opcionesBase() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { font: { size: 11 }, color: '#333' } },
+      tooltip: { callbacks: { label: ctx => ' ' + ctx.formattedValue } }
+    }
+  };
+}
+
+function actualizarGraficos(estabs) {
+  const f = getFiltros();
+  const ctx = textoContexto();
+  const años = DATA.meta.años;
+
+  // 1. Evolución por año
+  const pbcAnio = años.map(a => estabs.reduce((s, e) => s + (e[9][a] || 0), 0));
+  document.getElementById('sub-evolucion').textContent = ctx;
+  crearOActualizar('chart-evolucion', 'bar', años, [{
+    label: 'PBC Demencia',
+    data: pbcAnio,
+    backgroundColor: COLORES.slice(0, años.length),
+    borderRadius: 5
+  }], {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { font: { size: 10 } } },
+      x: { ticks: { font: { size: 10 } } }
+    }
+  });
+
+  // 2. Por Servicio de Salud
+  const ssMap = {};
+  estabs.forEach(e => {
+    const ss = DATA.lookup.ss[e[2]];
+    const v = f.anio ? (e[9][f.anio] || 0) : (e[9][años[años.length-1]] || 0);
+    ssMap[ss] = (ssMap[ss] || 0) + v;
+  });
+  const ssSorted = Object.entries(ssMap).sort((a,b) => b[1]-a[1]).slice(0, 15);
+  document.getElementById('sub-ss').textContent = ctx;
+  crearOActualizar('chart-ss', 'bar',
+    ssSorted.map(x=>x[0]),
+    [{
+      label: 'PBC', data: ssSorted.map(x=>x[1]),
+      backgroundColor: AZUL, borderRadius: 4
+    }],
+    {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, ticks: { font: { size: 9 } } },
+        y: { ticks: { font: { size: 9 } } }
+      }
+    }
+  );
+
+  // 3. Por Tipo
+  const tipoMap = {};
+  estabs.forEach(e => {
+    const t = DATA.lookup.tipos[e[4]];
+    const v = f.anio ? (e[9][f.anio] || 0) : pbcTotalEstab(e);
+    tipoMap[t] = (tipoMap[t] || 0) + v;
+  });
+  const tipoEntries = Object.entries(tipoMap).sort((a,b) => b[1]-a[1]);
+  document.getElementById('sub-tipo').textContent = ctx;
+  crearOActualizar('chart-tipo', 'doughnut',
+    tipoEntries.map(x=>x[0]),
+    [{
+      data: tipoEntries.map(x=>x[1]),
+      backgroundColor: COLORES,
+      borderWidth: 2
+    }],
+    { plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } } }
+  );
+
+  // 4. Por Dependencia
+  const depMap = {};
+  estabs.forEach(e => {
+    const d = DATA.lookup.dependencias[e[5]];
+    const v = f.anio ? (e[9][f.anio] || 0) : pbcTotalEstab(e);
+    depMap[d] = (depMap[d] || 0) + v;
+  });
+  const depEntries = Object.entries(depMap).sort((a,b) => b[1]-a[1]);
+  document.getElementById('sub-dep').textContent = ctx;
+  crearOActualizar('chart-dep', 'pie',
+    depEntries.map(x=>x[0]),
+    [{
+      data: depEntries.map(x=>x[1]),
+      backgroundColor: [AZUL, '#25306B', ROJO, '#2980b9'],
+      borderWidth: 2
+    }],
+    { plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } } }
+  );
+}
+
+function pbcTotalEstab(e) {
+  return DATA.meta.años.reduce((s, a) => s + (e[9][a] || 0), 0);
+}
+
+// ─── MAPA ───────────────────────────────────────────────────────
+function inicializarMapa() {
+  if (mapaLeaflet) return;
+  mapaLeaflet = L.map('mapa').setView([-35.5, -71.0], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 18
+  }).addTo(mapaLeaflet);
+}
+
+function actualizarMapa(estabs) {
+  if (!mapaLeaflet) inicializarMapa();
+  marcadores.forEach(m => mapaLeaflet.removeLayer(m));
+  marcadores = [];
+
+  const f = getFiltros();
+  const años = DATA.meta.años;
+  const ultimoAnio = años[años.length - 1];
+
+  estabs.forEach(e => {
+    if (!e[7] || !e[8]) return;
+    const v = f.anio ? (e[9][f.anio] || 0) : (e[9][ultimoAnio] || 0);
+    if (v <= 0) return;
+
+    const radio = Math.max(4, Math.min(20, Math.sqrt(v) * 1.8));
+    const color = v > 200 ? ROJO : v > 50 ? '#e67e22' : AZUL;
+
+    const circ = L.circleMarker([e[7], e[8]], {
+      radius: radio,
+      fillColor: color,
+      color: '#fff',
+      weight: 1,
+      fillOpacity: 0.75
+    });
+
+    const ss = DATA.lookup.ss[e[2]];
+    const com = DATA.lookup.comunas[e[3]];
+    const tipo = DATA.lookup.tipos[e[4]];
+    const dep = DATA.lookup.dependencias[e[5]];
+    const años_txt = DATA.meta.años.map(a => `<b>${a}:</b> ${e[9][a] ?? '–'}`).join(' | ');
+
+    circ.bindPopup(`
+      <b>${e[1]}</b><br>
+      ${tipo} · ${dep}<br>
+      ${com} · ${ss}<br>
+      <small>PBC: ${años_txt}</small>
+    `);
+    circ.addTo(mapaLeaflet);
+    marcadores.push(circ);
+  });
+
+  if (marcadores.length > 0) {
+    const group = L.featureGroup(marcadores);
+    mapaLeaflet.fitBounds(group.getBounds().pad(0.1));
+  }
+}
+
+// ─── TABLA ──────────────────────────────────────────────────────
+function actualizarTabla(estabs) {
+  const f = getFiltros();
+  const tbody = document.getElementById('tbody-tabla');
+  tbody.innerHTML = '';
+  const años = DATA.meta.años;
+
+  // Sort by PBC último año desc
+  const ult = años[años.length - 1];
+  const sorted = [...estabs].sort((a,b) => (b[9][ult]||0) - (a[9][ult]||0));
+
+  sorted.forEach(e => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${e[1]}</td>
+      <td><span class="badge">${DATA.lookup.tipos[e[4]]}</span></td>
+      <td>${DATA.lookup.dependencias[e[5]]}</td>
+      <td>${DATA.lookup.comunas[e[3]]}</td>
+      <td>${DATA.lookup.ss[e[2]]}</td>
+      <td>${e[9]['2014'] ?? '–'}</td>
+      <td>${e[9]['2015'] ?? '–'}</td>
+      <td>${e[9]['2016'] ?? '–'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ─── FICHA TERRITORIO ───────────────────────────────────────────
+function actualizarFicha(estabs) {
+  const f = getFiltros();
+  const hasSel = f.ss !== '' || f.comuna !== '' || f.estab !== '';
+
+  document.getElementById('sin-seleccion').style.display = hasSel ? 'none' : 'block';
+  document.getElementById('ficha-contenido').style.display = hasSel ? 'block' : 'none';
+  if (!hasSel) return;
+
+  // Titulo
+  let titulo = '';
+  if (f.estab !== '') {
+    const e = DATA.establecimientos.find(x => x[0] == f.estab);
+    titulo = e ? e[1] : 'Establecimiento';
+  } else if (f.comuna !== '') {
+    titulo = 'Comuna: ' + DATA.lookup.comunas[f.comuna];
+  } else if (f.ss !== '') {
+    titulo = 'Servicio de Salud: ' + DATA.lookup.ss[f.ss];
+  }
+  document.getElementById('ficha-titulo').textContent = titulo;
+
+  const años = DATA.meta.años;
+  const ult = años[años.length - 1];
+  const prim = años[0];
+
+  // KPIs
+  const totalUlt = estabs.reduce((s,e) => s + (e[9][ult]||0), 0);
+  const totalPrim = estabs.reduce((s,e) => s + (e[9][prim]||0), 0);
+  const variacion = totalPrim > 0 ? Math.round(((totalUlt - totalPrim)/totalPrim)*100) : null;
+  const prom = estabs.length > 0 ? Math.round(totalUlt / estabs.length) : 0;
+
+  document.getElementById('ft-pbc').textContent = totalUlt.toLocaleString('es-CL');
+  document.getElementById('ft-estabs').textContent = estabs.length;
+  document.getElementById('ft-prom').textContent = prom;
+  document.getElementById('ft-var').textContent = variacion !== null ? (variacion >= 0 ? '+' : '') + variacion + '%' : 'N/D';
+
+  // Mini gráfico evolución
+  const pbcAnio = años.map(a => estabs.reduce((s,e) => s + (e[9][a]||0), 0));
+  if (miniCharts['mini-evolucion']) miniCharts['mini-evolucion'].destroy();
+  miniCharts['mini-evolucion'] = new Chart(document.getElementById('mini-evolucion'), {
+    type: 'line',
+    data: { labels: años, datasets: [{ label: 'PBC', data: pbcAnio, borderColor: AZUL, backgroundColor: 'rgba(0,95,158,.15)', fill: true, tension: 0.3, pointRadius: 4 }] },
+    options: { ...opcionesBase(), plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+
+  // Mini gráfico tipo
+  const tipoMap = {};
+  estabs.forEach(e => {
+    const t = DATA.lookup.tipos[e[4]];
+    tipoMap[t] = (tipoMap[t]||0) + (e[9][ult]||0);
+  });
+  const tipoE = Object.entries(tipoMap).sort((a,b) => b[1]-a[1]);
+  if (miniCharts['mini-tipo']) miniCharts['mini-tipo'].destroy();
+  miniCharts['mini-tipo'] = new Chart(document.getElementById('mini-tipo'), {
+    type: 'doughnut',
+    data: { labels: tipoE.map(x=>x[0]), datasets: [{ data: tipoE.map(x=>x[1]), backgroundColor: COLORES }] },
+    options: { ...opcionesBase(), plugins: { legend: { position: 'right', labels: { font: { size: 9 } } } } }
+  });
+
+  // Top establecimientos
+  const sorted = [...estabs].sort((a,b) => (b[9][ult]||0)-(a[9][ult]||0)).slice(0,20);
+  const tbody = document.getElementById('tbody-top');
+  tbody.innerHTML = '';
+  sorted.forEach(e => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${e[1]}</td><td>${DATA.lookup.tipos[e[4]]}</td><td>${e[9]['2014']??'–'}</td><td>${e[9]['2015']??'–'}</td><td>${e[9]['2016']??'–'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ─── DESCARGA PNG ───────────────────────────────────────────────
+function descargarPNG(canvasId, titulo) {
+  const original = document.getElementById(canvasId);
+  const ctx2 = textoContexto();
+  const margen = 80;
+  const tmp = document.createElement('canvas');
+  tmp.width = original.width;
+  tmp.height = original.height + margen;
+  const ctx = tmp.getContext('2d');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, tmp.width, tmp.height);
+
+  // Header
+  ctx.fillStyle = '#25306B';
+  ctx.fillRect(0, 0, tmp.width, 50);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 13px Arial';
+  ctx.fillText(titulo, 12, 20);
+  ctx.font = '10px Arial';
+  ctx.fillText(ctx2, 12, 36);
+  ctx.font = '9px Arial';
+  ctx.fillText('DIVAP · MINSAL · Chile', tmp.width - 160, 20);
+
+  ctx.drawImage(original, 0, margen);
+  const link = document.createElement('a');
+  link.download = titulo.replace(/\s+/g,'_') + '.png';
+  link.href = tmp.toDataURL('image/png');
+  link.click();
+}
+
+// ─── ACTUALIZAR TODO ─────────────────────────────────────────────
+function actualizarTodo() {
+  const todosEstabs = DATA.establecimientos;
+
+  // Filtro previo sin estab para cascada
+  const f = getFiltros();
+  const sinEstab = todosEstabs.filter(e => {
+    if (f.ss !== '' && e[2] != f.ss) return false;
+    if (f.tipo !== '' && e[4] != f.tipo) return false;
+    if (f.dep !== '' && e[5] != f.dep) return false;
+    return true;
+  });
+  actualizarComunasYEstabs(sinEstab);
+
+  const estabs = getEstabsFiltrados();
+  document.getElementById('contexto-filtros').textContent = 'Mostrando: ' + textoContexto();
+
+  actualizarKPIs(estabs);
+  actualizarGraficos(estabs);
+  actualizarTabla(estabs);
+  actualizarFicha(estabs);
+
+  // Mapa solo si tab activo
+  if (document.getElementById('panel-mapa').classList.contains('activo')) {
+    actualizarMapa(estabs);
+  }
+}
+
+// ─── EVENTOS ────────────────────────────────────────────────────
+function bindEventos() {
+  ['f-anio','f-ss','f-comuna','f-estab','f-tipo','f-dep'].forEach(id => {
+    document.getElementById(id).addEventListener('change', actualizarTodo);
+  });
+
+  document.getElementById('btn-limpiar').addEventListener('click', () => {
+    ['f-anio','f-ss','f-tipo','f-dep'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    actualizarTodo();
+  });
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('activo'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('activo'));
+      tab.classList.add('activo');
+      const panel = document.getElementById(tab.dataset.panel);
+      panel.classList.add('activo');
+      if (tab.dataset.panel === 'panel-mapa') {
+        const estabs = getEstabsFiltrados();
+        actualizarMapa(estabs);
+        setTimeout(() => mapaLeaflet && mapaLeaflet.invalidateSize(), 100);
+      }
+    });
+  });
+}
+</script>
+</body>
+</html>
