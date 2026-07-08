@@ -343,11 +343,11 @@ function getFiltros() {
 function getEstabsFiltrados() {
   const f = getFiltros();
   return DATA.establecimientos.filter(e => {
-    if (f.ss !== '' && e[2] != f.ss) return false;
-    if (f.comuna !== '' && e[3] != f.comuna) return false;
-    if (f.estab !== '' && e[0] != f.estab) return false;
-    if (f.tipo !== '' && e[4] != f.tipo) return false;
-    if (f.dep !== '' && e[5] != f.dep) return false;
+    if (f.ss !== '' && String(e[2]) !== f.ss) return false;
+    if (f.comuna !== '' && String(e[3]) !== f.comuna) return false;
+    if (f.estab !== '' && String(e[0]) !== f.estab) return false;
+    if (f.tipo !== '' && String(e[4]) !== f.tipo) return false;
+    if (f.dep !== '' && String(e[5]) !== f.dep) return false;
     return true;
   });
 }
@@ -362,32 +362,51 @@ function getPBCEstabAnio(e, anio) {
 }
 
 function actualizarComunasYEstabs(estabs) {
-  const f = getFiltros();
-  const comunasDisp = [...new Set(estabs.map(e => e[3]))].sort((a,b) => {
-    return DATA.lookup.comunas[a].localeCompare(DATA.lookup.comunas[b]);
-  });
-  const estabsDisp = estabs;
-
   const fCom = document.getElementById('f-comuna');
   const fEst = document.getElementById('f-estab');
-  const comVal = fCom.value;
-  const estVal = fEst.value;
+  const comVal = String(fCom.value);
+  const estVal = String(fEst.value);
+
+  // Comunas disponibles
+  const comunasDisp = [...new Set(estabs.map(e => String(e[3])))].sort((a,b) =>
+    DATA.lookup.comunas[a].localeCompare(DATA.lookup.comunas[b], 'es')
+  );
 
   fCom.innerHTML = '<option value="">Todas</option>';
   comunasDisp.forEach(ci => {
     const o = document.createElement('option');
-    o.value = ci; o.textContent = DATA.lookup.comunas[ci];
-    if (ci == comVal) o.selected = true;
+    o.value = ci;
+    o.textContent = DATA.lookup.comunas[ci];
+    if (ci === comVal) o.selected = true;
     fCom.appendChild(o);
   });
 
+  // Si la comuna ya no existe en las opciones disponibles, resetear
+  if (comVal !== '' && !comunasDisp.includes(comVal)) {
+    fCom.value = '';
+  }
+
+  // Establecimientos filtrados por la comuna activa
+  const comActual = fCom.value;
+  const estabsParaCom = comActual !== ''
+    ? estabs.filter(e => String(e[3]) === comActual)
+    : estabs;
+
+  const estabsSorted = [...estabsParaCom].sort((a,b) => a[1].localeCompare(b[1], 'es'));
+
   fEst.innerHTML = '<option value="">Todos</option>';
-  estabsDisp.forEach(e => {
+  estabsSorted.forEach(e => {
     const o = document.createElement('option');
-    o.value = e[0]; o.textContent = e[1];
-    if (e[0] == estVal) o.selected = true;
+    o.value = String(e[0]);
+    o.textContent = e[1];
+    if (String(e[0]) === estVal) o.selected = true;
     fEst.appendChild(o);
   });
+
+  // Si el estab ya no existe en las opciones disponibles, resetear
+  if (estVal !== '' && !estabsSorted.find(e => String(e[0]) === estVal)) {
+    fEst.value = '';
+  }
 }
 
 // ─── CONTEXTO TEXTO ─────────────────────────────────────────────
@@ -753,9 +772,9 @@ function actualizarTodo() {
   // Filtro previo sin estab para cascada
   const f = getFiltros();
   const sinEstab = todosEstabs.filter(e => {
-    if (f.ss !== '' && e[2] != f.ss) return false;
-    if (f.tipo !== '' && e[4] != f.tipo) return false;
-    if (f.dep !== '' && e[5] != f.dep) return false;
+    if (f.ss !== '' && String(e[2]) !== f.ss) return false;
+    if (f.tipo !== '' && String(e[4]) !== f.tipo) return false;
+    if (f.dep !== '' && String(e[5]) !== f.dep) return false;
     return true;
   });
   actualizarComunasYEstabs(sinEstab);
@@ -784,6 +803,9 @@ function bindEventos() {
     ['f-anio','f-ss','f-tipo','f-dep'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    // Resetear también los dependientes de cascada
+    document.getElementById('f-comuna').innerHTML = '<option value="">Todas</option>';
+    document.getElementById('f-estab').innerHTML = '<option value="">Todos</option>';
     actualizarTodo();
   });
 
