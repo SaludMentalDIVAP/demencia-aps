@@ -157,7 +157,7 @@ tbody tr:hover{background:#e8edf5}
   <div class="kpi"><div class="kpi-valor" id="kpi-estabs">–</div><div class="kpi-label">Establecimientos</div><div class="kpi-sub" id="kpi-estabs-sub"></div></div>
   <div class="kpi"><div class="kpi-valor" id="kpi-comunas">–</div><div class="kpi-label">Comunas</div><div class="kpi-sub"></div></div>
   <div class="kpi"><div class="kpi-valor" id="kpi-ss">–</div><div class="kpi-label">Servicios de Salud</div><div class="kpi-sub"></div></div>
-  <div class="kpi"><div class="kpi-valor" id="kpi-variacion">–</div><div class="kpi-label">Variación 2014→2016</div><div class="kpi-sub" id="kpi-var-sub"></div></div>
+  <div class="kpi"><div class="kpi-valor" id="kpi-variacion">–</div><div class="kpi-label" id="kpi-var-label">Variación</div><div class="kpi-sub" id="kpi-var-sub"></div></div>
 </div>
 
 <div id="tabs">
@@ -197,6 +197,14 @@ tbody tr:hover{background:#e8edf5}
         <div class="canvas-wrap"><canvas id="chart-dep"></canvas></div>
       </div>
     </div>
+    <div id="wrap-categorias" style="display:none">
+      <div class="tarjeta">
+        <h3>Distribución por Severidad (Leve / Moderada / Avanzada)</h3>
+        <div class="subtitulo" id="sub-cat"></div>
+        <button class="btn-png" onclick="descargarPNG('chart-cat','Distribución por Severidad')">⬇ PNG</button>
+        <div class="canvas-wrap"><canvas id="chart-cat"></canvas></div>
+      </div>
+    </div>
   </div>
 
   <!-- PANEL TERRITORIO -->
@@ -220,12 +228,16 @@ tbody tr:hover{background:#e8edf5}
             <h3>Distribución por Tipo</h3>
             <div class="mini-chart-wrap"><canvas id="mini-tipo"></canvas></div>
           </div>
+          <div class="tarjeta" id="wrap-mini-cat" style="display:none">
+            <h3>Severidad <span id="mini-cat-año"></span></h3>
+            <div class="mini-chart-wrap"><canvas id="mini-cat"></canvas></div>
+          </div>
         </div>
         <div class="tarjeta" style="margin-top:14px">
           <h3>Top Establecimientos</h3>
           <div class="tabla-wrap" style="max-height:300px">
             <table id="tabla-top">
-              <thead><tr><th>Establecimiento</th><th>Tipo</th><th>2014</th><th>2015</th><th>2016</th></tr></thead>
+              <thead id="thead-top"><tr></tr></thead>
               <tbody id="tbody-top"></tbody>
             </table>
           </div>
@@ -245,18 +257,7 @@ tbody tr:hover{background:#e8edf5}
   <div class="panel" id="panel-tabla">
     <div class="tabla-wrap">
       <table>
-        <thead>
-          <tr>
-            <th>Establecimiento</th>
-            <th>Tipo</th>
-            <th>Dependencia</th>
-            <th>Comuna</th>
-            <th>Servicio de Salud</th>
-            <th>PBC 2014</th>
-            <th>PBC 2015</th>
-            <th>PBC 2016</th>
-          </tr>
-        </thead>
+        <thead id="thead-tabla"><tr></tr></thead>
         <tbody id="tbody-tabla"></tbody>
       </table>
     </div>
@@ -353,12 +354,18 @@ function getEstabsFiltrados() {
 }
 
 function getPBCEstab(e, anio) {
-  if (anio) return e[9][anio] || 0;
-  return DATA.meta.años.reduce((s, a) => s + (e[9][a] || 0), 0);
+  if (anio) return getPBCVal(e[9][anio]);
+  return DATA.meta.años.reduce((s, a) => s + getPBCVal(e[9][a]), 0);
 }
 
-function getPBCEstabAnio(e, anio) {
-  return e[9][anio] || 0;
+function getPBCVal(v) {
+  if (!v) return 0;
+  if (typeof v === 'object') return v.t || 0;
+  return v || 0;
+}
+
+function esCat(anio) {
+  return DATA.meta.años_cat && DATA.meta.años_cat.includes(String(anio));
 }
 
 function actualizarComunasYEstabs(estabs) {
@@ -414,7 +421,7 @@ function textoContexto() {
   const f = getFiltros();
   let parts = [];
   if (f.anio) parts.push('Año ' + f.anio);
-  else parts.push('Todos los años (2014–2016)');
+  else parts.push('Todos los años (' + DATA.meta.años[0] + '–' + DATA.meta.años[DATA.meta.años.length-1] + ')');
   if (f.ss !== '') parts.push(DATA.lookup.ss[f.ss]);
   else parts.push('Todo el país');
   if (f.comuna !== '') parts.push('Comuna: ' + DATA.lookup.comunas[f.comuna]);
@@ -434,11 +441,11 @@ function actualizarKPIs(estabs) {
 
   let totalPBC = 0;
   if (f.anio) {
-    estabs.forEach(e => totalPBC += (e[9][f.anio] || 0));
+    estabs.forEach(e => totalPBC += getPBCVal(e[9][f.anio]));
   } else {
     // Suma del último año disponible
     const ultimoAnio = años[años.length - 1];
-    estabs.forEach(e => totalPBC += (e[9][ultimoAnio] || 0));
+    estabs.forEach(e => totalPBC += getPBCVal(e[9][ultimoAnio]));
   }
 
   const nEstabs = estabs.length;
@@ -446,13 +453,17 @@ function actualizarKPIs(estabs) {
   const nSS = new Set(estabs.map(e => e[2])).size;
 
   // Variación 2014→2016
+  const primerAnio = años[0];
+  const ultimoAnioVar = años[años.length - 1];
   let pbc14 = 0, pbc16 = 0;
   estabs.forEach(e => {
-    pbc14 += (e[9]['2014'] || 0);
-    pbc16 += (e[9]['2016'] || 0);
+    pbc14 += getPBCVal(e[9][primerAnio]);
+    pbc16 += getPBCVal(e[9][ultimoAnioVar]);
   });
   let variacion = pbc14 > 0 ? Math.round(((pbc16 - pbc14) / pbc14) * 100) : null;
 
+  const primerA = años[0]; const ultA = años[años.length-1];
+  document.getElementById('kpi-var-label').textContent = 'Variación ' + primerA + '→' + ultA;
   document.getElementById('kpi-pbc').textContent = totalPBC.toLocaleString('es-CL');
   document.getElementById('kpi-pbc-sub').textContent = f.anio ? 'Año ' + f.anio : 'Año 2016';
   document.getElementById('kpi-estabs').textContent = nEstabs.toLocaleString('es-CL');
@@ -462,7 +473,7 @@ function actualizarKPIs(estabs) {
   if (variacion !== null) {
     const signo = variacion >= 0 ? '+' : '';
     document.getElementById('kpi-variacion').textContent = signo + variacion + '%';
-    document.getElementById('kpi-var-sub').textContent = pbc14 + ' → ' + pbc16;
+    document.getElementById('kpi-var-sub').textContent = primerAnio + ': ' + pbc14 + ' → ' + ultimoAnioVar + ': ' + pbc16;
   } else {
     document.getElementById('kpi-variacion').textContent = 'N/D';
     document.getElementById('kpi-var-sub').textContent = '';
@@ -497,7 +508,7 @@ function actualizarGraficos(estabs) {
   const años = DATA.meta.años;
 
   // 1. Evolución por año
-  const pbcAnio = años.map(a => estabs.reduce((s, e) => s + (e[9][a] || 0), 0));
+  const pbcAnio = años.map(a => estabs.reduce((s, e) => s + getPBCVal(e[9][a]), 0));
   document.getElementById('sub-evolucion').textContent = ctx;
   crearOActualizar('chart-evolucion', 'bar', años, [{
     label: 'PBC Demencia',
@@ -516,7 +527,7 @@ function actualizarGraficos(estabs) {
   const ssMap = {};
   estabs.forEach(e => {
     const ss = DATA.lookup.ss[e[2]];
-    const v = f.anio ? (e[9][f.anio] || 0) : (e[9][años[años.length-1]] || 0);
+    const v = f.anio ? getPBCVal(e[9][f.anio]) : getPBCVal(e[9][años[años.length-1]]);
     ssMap[ss] = (ssMap[ss] || 0) + v;
   });
   const ssSorted = Object.entries(ssMap).sort((a,b) => b[1]-a[1]).slice(0, 15);
@@ -541,7 +552,7 @@ function actualizarGraficos(estabs) {
   const tipoMap = {};
   estabs.forEach(e => {
     const t = DATA.lookup.tipos[e[4]];
-    const v = f.anio ? (e[9][f.anio] || 0) : pbcTotalEstab(e);
+    const v = f.anio ? getPBCVal(e[9][f.anio]) : pbcTotalEstab(e);
     tipoMap[t] = (tipoMap[t] || 0) + v;
   });
   const tipoEntries = Object.entries(tipoMap).sort((a,b) => b[1]-a[1]);
@@ -560,7 +571,7 @@ function actualizarGraficos(estabs) {
   const depMap = {};
   estabs.forEach(e => {
     const d = DATA.lookup.dependencias[e[5]];
-    const v = f.anio ? (e[9][f.anio] || 0) : pbcTotalEstab(e);
+    const v = f.anio ? getPBCVal(e[9][f.anio]) : pbcTotalEstab(e);
     depMap[d] = (depMap[d] || 0) + v;
   });
   const depEntries = Object.entries(depMap).sort((a,b) => b[1]-a[1]);
@@ -574,10 +585,44 @@ function actualizarGraficos(estabs) {
     }],
     { plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } } }
   );
+
+  // 5. Categorías severidad (solo años con desagregación)
+  const wrapCat = document.getElementById('wrap-categorias');
+  const añosCat = DATA.meta.años_cat || [];
+  const añosCatActivos = f.anio ? (esCat(f.anio) ? [f.anio] : []) : añosCat;
+  if (añosCatActivos.length > 0) {
+    wrapCat.style.display = 'block';
+    let totL = 0, totM = 0, totA = 0;
+    estabs.forEach(e => {
+      añosCatActivos.forEach(a => {
+        const v = e[9][a];
+        if (v && typeof v === 'object') {
+          totL += v.l || 0; totM += v.m || 0; totA += v.a || 0;
+        }
+      });
+    });
+    const labelCat = añosCatActivos.length === 1 ? añosCatActivos[0] : añosCatActivos.join(', ');
+    document.getElementById('sub-cat').textContent = ctx + ' · Año(s): ' + labelCat;
+    crearOActualizar('chart-cat', 'bar',
+      ['Leve', 'Moderada', 'Avanzada'],
+      [{
+        label: 'PBC por severidad',
+        data: [totL, totM, totA],
+        backgroundColor: [AZUL, '#e67e22', ROJO],
+        borderRadius: 6
+      }],
+      {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true }, x: { ticks: { font: { size: 12 } } } }
+      }
+    );
+  } else {
+    wrapCat.style.display = 'none';
+  }
 }
 
 function pbcTotalEstab(e) {
-  return DATA.meta.años.reduce((s, a) => s + (e[9][a] || 0), 0);
+  return DATA.meta.años.reduce((s, a) => s + getPBCVal(e[9][a]), 0);
 }
 
 // ─── MAPA ───────────────────────────────────────────────────────
@@ -601,7 +646,7 @@ function actualizarMapa(estabs) {
 
   estabs.forEach(e => {
     if (!e[7] || !e[8]) return;
-    const v = f.anio ? (e[9][f.anio] || 0) : (e[9][ultimoAnio] || 0);
+    const v = f.anio ? getPBCVal(e[9][f.anio]) : getPBCVal(e[9][ultimoAnio]);
     if (v <= 0) return;
 
     const radio = Math.max(4, Math.min(20, Math.sqrt(v) * 1.8));
@@ -639,27 +684,40 @@ function actualizarMapa(estabs) {
 
 // ─── TABLA ──────────────────────────────────────────────────────
 function actualizarTabla(estabs) {
-  const f = getFiltros();
+  const años = DATA.meta.años;
+  const ult = años[años.length - 1];
+
+  // Cabecera dinámica
+  const thead = document.querySelector('#thead-tabla tr');
+  thead.innerHTML = '<th>Establecimiento</th><th>Tipo</th><th>Dependencia</th><th>Comuna</th><th>Servicio de Salud</th>';
+  años.forEach(a => {
+    if (esCat(a)) {
+      thead.innerHTML += `<th>PBC ${a}</th><th>Leve</th><th>Mod.</th><th>Av.</th>`;
+    } else {
+      thead.innerHTML += `<th>PBC ${a}</th>`;
+    }
+  });
+
+  const sorted = [...estabs].sort((a,b) => getPBCVal(b[9][ult]) - getPBCVal(a[9][ult]));
   const tbody = document.getElementById('tbody-tabla');
   tbody.innerHTML = '';
-  const años = DATA.meta.años;
-
-  // Sort by PBC último año desc
-  const ult = años[años.length - 1];
-  const sorted = [...estabs].sort((a,b) => (b[9][ult]||0) - (a[9][ult]||0));
 
   sorted.forEach(e => {
+    let celdas = `<td>${e[1]}</td><td><span class="badge">${DATA.lookup.tipos[e[4]]}</span></td><td>${DATA.lookup.dependencias[e[5]]}</td><td>${DATA.lookup.comunas[e[3]]}</td><td>${DATA.lookup.ss[e[2]]}</td>`;
+    años.forEach(a => {
+      const v = e[9][a];
+      if (esCat(a)) {
+        const t = v ? (v.t ?? '–') : '–';
+        const l = v ? (v.l ?? '–') : '–';
+        const m = v ? (v.m ?? '–') : '–';
+        const av = v ? (v.a ?? '–') : '–';
+        celdas += `<td><b>${t}</b></td><td>${l}</td><td>${m}</td><td>${av}</td>`;
+      } else {
+        celdas += `<td>${v ?? '–'}</td>`;
+      }
+    });
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${e[1]}</td>
-      <td><span class="badge">${DATA.lookup.tipos[e[4]]}</span></td>
-      <td>${DATA.lookup.dependencias[e[5]]}</td>
-      <td>${DATA.lookup.comunas[e[3]]}</td>
-      <td>${DATA.lookup.ss[e[2]]}</td>
-      <td>${e[9]['2014'] ?? '–'}</td>
-      <td>${e[9]['2015'] ?? '–'}</td>
-      <td>${e[9]['2016'] ?? '–'}</td>
-    `;
+    tr.innerHTML = celdas;
     tbody.appendChild(tr);
   });
 }
@@ -723,13 +781,54 @@ function actualizarFicha(estabs) {
     options: { ...opcionesBase(), plugins: { legend: { position: 'right', labels: { font: { size: 9 } } } } }
   });
 
+  // Mini gráfico categorías
+  const añosCat = DATA.meta.años_cat || [];
+  const wrapMiniCat = document.getElementById('wrap-mini-cat');
+  const añosCatDisp = f.anio ? (esCat(f.anio) ? [f.anio] : []) : añosCat;
+  if (añosCatDisp.length > 0) {
+    wrapMiniCat.style.display = 'block';
+    document.getElementById('mini-cat-año').textContent = añosCatDisp.join(', ');
+    let cl = 0, cm = 0, ca = 0;
+    estabs.forEach(e => {
+      añosCatDisp.forEach(a => {
+        const v = e[9][a];
+        if (v && typeof v === 'object') { cl += v.l||0; cm += v.m||0; ca += v.a||0; }
+      });
+    });
+    if (miniCharts['mini-cat']) miniCharts['mini-cat'].destroy();
+    miniCharts['mini-cat'] = new Chart(document.getElementById('mini-cat'), {
+      type: 'doughnut',
+      data: { labels: ['Leve','Moderada','Avanzada'], datasets: [{ data: [cl, cm, ca], backgroundColor: [AZUL,'#e67e22',ROJO] }] },
+      options: { ...opcionesBase(), plugins: { legend: { position: 'right', labels: { font: { size: 9 } } } } }
+    });
+  } else {
+    wrapMiniCat.style.display = 'none';
+  }
+
   // Top establecimientos
-  const sorted = [...estabs].sort((a,b) => (b[9][ult]||0)-(a[9][ult]||0)).slice(0,20);
+  const sorted = [...estabs].sort((a,b) => getPBCVal(b[9][ult]) - getPBCVal(a[9][ult])).slice(0,20);
   const tbody = document.getElementById('tbody-top');
   tbody.innerHTML = '';
+  // Cabecera dinámica top table
+  const theadTop = document.querySelector('#thead-top tr');
+  theadTop.innerHTML = '<th>Establecimiento</th><th>Tipo</th>';
+  DATA.meta.años.forEach(a => {
+    if (esCat(a)) theadTop.innerHTML += `<th>T ${a}</th><th>L</th><th>M</th><th>Av</th>`;
+    else theadTop.innerHTML += `<th>${a}</th>`;
+  });
+
   sorted.forEach(e => {
+    let celdas = `<td>${e[1]}</td><td>${DATA.lookup.tipos[e[4]]}</td>`;
+    DATA.meta.años.forEach(a => {
+      const v = e[9][a];
+      if (esCat(a)) {
+        celdas += `<td><b>${v?v.t:'–'}</b></td><td>${v?v.l:'–'}</td><td>${v?v.m:'–'}</td><td>${v?v.a:'–'}</td>`;
+      } else {
+        celdas += `<td>${v??'–'}</td>`;
+      }
+    });
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${e[1]}</td><td>${DATA.lookup.tipos[e[4]]}</td><td>${e[9]['2014']??'–'}</td><td>${e[9]['2015']??'–'}</td><td>${e[9]['2016']??'–'}</td>`;
+    tr.innerHTML = celdas;
     tbody.appendChild(tr);
   });
 }
