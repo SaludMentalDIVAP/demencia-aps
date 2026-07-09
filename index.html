@@ -2,989 +2,678 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Demencias en APS – DIVAP MINSAL</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard Demencias APS – DIVAP MINSAL</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root{
-  --azul-oscuro:#25306B;
-  --azul:#005F9E;
-  --rojo:#C0392B;
-  --gris-claro:#f4f6f9;
-  --gris-borde:#dce1ea;
-  --texto:#222;
-  --blanco:#fff;
-  --sombra:0 2px 8px rgba(0,0,0,.10);
+  --az1:#003F6B;--az2:#005F9E;--az3:#0090D0;
+  --rojo:#C0392B;--verde:#2E8B57;--naranja:#E67E22;--morado:#7c3aed;
+  --celeste:#E8F4FB;--gris-claro:#F4F7FA;--gris-borde:#D0DCE8;
+  --texto:#1A2A3A;--texto-s:#4A6080;--blanco:#fff;
+  --sombra:0 2px 12px rgba(0,60,120,.10);--sombra-h:0 6px 24px rgba(0,60,120,.18);
+  --radius:10px;--font:'Segoe UI','Helvetica Neue',Arial,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-claro);color:var(--texto);font-size:14px}
-
-/* HEADER */
-#header{background:var(--azul-oscuro);color:var(--blanco);padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-#header img{height:52px;flex-shrink:0;border-radius:4px}
-#header-texto h1{font-size:1.15rem;font-weight:700;line-height:1.25}
-#header-texto p{font-size:.82rem;opacity:.85;margin-top:2px}
-
-/* FILTROS */
-#filtros{background:var(--blanco);border-bottom:2px solid var(--azul);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
-.filtro-grupo{display:flex;flex-direction:column;gap:3px;min-width:130px;flex:1}
-.filtro-grupo label{font-size:.75rem;font-weight:600;color:var(--azul-oscuro);text-transform:uppercase;letter-spacing:.03em}
-.filtro-grupo select{border:1.5px solid var(--gris-borde);border-radius:5px;padding:5px 8px;font-size:.82rem;background:var(--blanco);color:var(--texto);cursor:pointer}
-.filtro-grupo select:focus{outline:none;border-color:var(--azul)}
-#btn-limpiar{background:var(--rojo);color:var(--blanco);border:none;border-radius:5px;padding:6px 14px;font-size:.82rem;font-weight:600;cursor:pointer;align-self:flex-end;white-space:nowrap}
-#btn-limpiar:hover{background:#a93226}
-
-/* KPIs */
-#kpis{display:flex;flex-wrap:wrap;gap:12px;padding:14px 16px;background:var(--blanco);border-bottom:1px solid var(--gris-borde)}
-.kpi{flex:1;min-width:130px;background:var(--gris-claro);border-radius:8px;padding:12px 14px;border-left:4px solid var(--azul)}
-.kpi-valor{font-size:1.6rem;font-weight:700;color:var(--azul-oscuro);line-height:1}
-.kpi-label{font-size:.75rem;color:#555;margin-top:4px}
-.kpi-sub{font-size:.72rem;color:#888;margin-top:2px}
-
-/* CONTEXTO */
-#contexto-filtros{background:var(--azul-oscuro);color:var(--blanco);font-size:.78rem;padding:5px 16px;opacity:.9}
-
-/* TABS */
-#tabs{display:flex;background:var(--blanco);border-bottom:2px solid var(--azul-oscuro);padding:0 16px;gap:4px;overflow-x:auto}
-.tab{padding:10px 16px;cursor:pointer;font-size:.82rem;font-weight:600;color:#666;border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s}
-.tab:hover{color:var(--azul)}
-.tab.activo{color:var(--azul-oscuro);border-bottom-color:var(--azul-oscuro)}
-
-/* CONTENIDO */
-#contenido{padding:16px;display:flex;flex-direction:column;gap:16px}
-.panel{display:none}
-.panel.activo{display:block}
-
-/* GRILLA GRÁFICOS */
-.grilla-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.grilla-1{display:grid;grid-template-columns:1fr;gap:14px}
-@media(max-width:700px){.grilla-2{grid-template-columns:1fr}}
-
-/* TARJETA GRÁFICO */
-.tarjeta{background:var(--blanco);border-radius:10px;box-shadow:var(--sombra);padding:14px 16px;position:relative}
-.tarjeta h3{font-size:.88rem;font-weight:700;color:var(--azul-oscuro);margin-bottom:2px}
-.tarjeta .subtitulo{font-size:.75rem;color:#666;margin-bottom:10px;min-height:16px}
-.btn-png{position:absolute;top:12px;right:12px;background:var(--azul);color:var(--blanco);border:none;border-radius:4px;padding:4px 9px;font-size:.72rem;cursor:pointer;opacity:.7;transition:opacity .2s}
-.btn-png:hover{opacity:1}
-.canvas-wrap{position:relative;height:260px}
-.canvas-wrap canvas{width:100%!important}
-
-/* MAPA */
-#mapa-wrap{background:var(--blanco);border-radius:10px;box-shadow:var(--sombra);overflow:hidden}
-#mapa{height:480px;width:100%}
-@media(max-width:700px){#mapa{height:320px}}
-
-/* TABLA */
-.tabla-wrap{background:var(--blanco);border-radius:10px;box-shadow:var(--sombra);overflow:auto;max-height:500px}
-table{width:100%;border-collapse:collapse;font-size:.8rem}
-thead th{background:var(--azul-oscuro);color:var(--blanco);padding:8px 10px;text-align:left;position:sticky;top:0;z-index:1;white-space:nowrap}
-tbody tr:nth-child(even){background:#f8f9fc}
-tbody td{padding:6px 10px;border-bottom:1px solid var(--gris-borde)}
-tbody tr:hover{background:#e8edf5}
-.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.7rem;font-weight:600;background:var(--azul);color:var(--blanco)}
-
-/* FICHA TERRITORIO */
-#ficha-territorio{background:var(--blanco);border-radius:10px;box-shadow:var(--sombra);padding:16px}
-#ficha-territorio h2{font-size:1rem;color:var(--azul-oscuro);font-weight:700;margin-bottom:12px;border-bottom:2px solid var(--azul-oscuro);padding-bottom:6px}
-.ficha-kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
-.ficha-kpi{flex:1;min-width:120px;background:var(--gris-claro);border-radius:7px;padding:10px 12px;border-left:3px solid var(--rojo)}
-.ficha-kpi-val{font-size:1.3rem;font-weight:700;color:var(--azul-oscuro)}
-.ficha-kpi-lbl{font-size:.72rem;color:#555;margin-top:2px}
-.mini-chart-wrap{height:160px;position:relative}
-#sin-seleccion{color:#888;font-size:.9rem;padding:20px 0;text-align:center}
-
-/* LOADING */
-#loading{position:fixed;inset:0;background:rgba(37,48,107,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:var(--blanco)}
-#loading p{margin-top:14px;font-size:1rem;opacity:.9}
-.spinner{width:44px;height:44px;border:4px solid rgba(255,255,255,.3);border-top-color:var(--blanco);border-radius:50%;animation:spin .8s linear infinite}
+body{font-family:var(--font);background:var(--gris-claro);color:var(--texto);min-height:100vh}
+.header{background:linear-gradient(135deg,var(--az1) 0%,var(--az2) 60%,var(--az3) 100%);color:#fff;position:sticky;top:0;z-index:1000;box-shadow:0 3px 16px rgba(0,0,0,.25)}
+.header-inner{max-width:1600px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:16px}
+.header-logo{display:flex;align-items:center;flex-shrink:0;background:#fff;border-radius:8px;padding:4px 8px;height:60px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.header-logo img{height:50px}
+.header-title{flex:1}
+.header-title h1{font-size:16px;font-weight:700;line-height:1.3}
+.header-title .hsub{font-size:11px;opacity:.72;margin-top:2px}
+.header-meta{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.meta-chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;white-space:nowrap}
+.tabs-bar{background:#fff;border-bottom:3px solid var(--gris-borde);position:sticky;top:80px;z-index:998;box-shadow:0 2px 8px rgba(0,60,120,.07)}
+.tabs-inner{max-width:1600px;margin:0 auto;padding:0 24px;display:flex;overflow-x:auto}
+.tab-btn{padding:11px 18px;font-size:11px;font-weight:700;color:var(--texto-s);border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-3px;transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.tab-btn:hover{color:var(--az2);background:var(--celeste)}
+.tab-btn.active{color:var(--az2);border-bottom-color:var(--az2)}
+.tab-content{display:none}.tab-content.active{display:block}
+.filtros-bar{background:#fff;border-bottom:2px solid var(--gris-borde);position:sticky;top:124px;z-index:997;box-shadow:0 2px 8px rgba(0,60,120,.07)}
+.filtros-inner{max-width:1600px;margin:0 auto;padding:7px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.filtro-group{display:flex;align-items:center;gap:5px}
+.filtro-group label{font-size:11px;color:var(--texto-s);font-weight:600;white-space:nowrap}
+select.filtro{font-size:11px;font-family:var(--font);border:1.5px solid var(--gris-borde);border-radius:6px;padding:5px 8px;background:var(--gris-claro);color:var(--texto);cursor:pointer;outline:none;min-width:120px;max-width:190px}
+select.filtro:focus{border-color:var(--az2);background:#fff}
+.btn-reset{padding:6px 14px;background:var(--az2);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;margin-left:auto;white-space:nowrap}
+.btn-reset:hover{background:var(--az1)}
+.filtros-count{font-size:10px;color:var(--texto-s)}
+.main{max-width:1600px;margin:0 auto;padding:18px 24px 40px}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+.kpi-card{background:#fff;border-radius:var(--radius);box-shadow:var(--sombra);padding:16px 18px;border-left:5px solid var(--az2);display:flex;flex-direction:column;gap:4px;transition:box-shadow .2s,transform .2s}
+.kpi-card:hover{box-shadow:var(--sombra-h);transform:translateY(-2px)}
+.kpi-card.verde{border-left-color:var(--verde)}.kpi-card.naranja{border-left-color:var(--naranja)}
+.kpi-card.rojo{border-left-color:var(--rojo)}.kpi-card.morado{border-left-color:var(--morado)}
+.kpi-card.leve{border-left-color:#005F9E}.kpi-card.mod{border-left-color:#E67E22}.kpi-card.av{border-left-color:#C0392B}
+.kpi-icon{font-size:20px;margin-bottom:2px}
+.kpi-label{font-size:10px;color:var(--texto-s);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.kpi-value{font-size:26px;font-weight:800;color:var(--az1);line-height:1}
+.kpi-value.sm{font-size:18px}.kpi-value.xs{font-size:13px}
+.kpi-sub{font-size:10px;color:var(--texto-s);margin-top:2px}
+.sec-title{font-size:12px;font-weight:700;color:var(--az2);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.sec-title::before{content:'';display:block;width:4px;height:16px;background:var(--az2);border-radius:2px}
+.sec-sep{height:1px;background:var(--gris-borde);margin:4px 0 14px}
+.charts-grid{display:grid;gap:14px;margin-bottom:18px}
+.g1{grid-template-columns:1fr}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
+.g2c{grid-template-columns:2fr 1fr}.gc2{grid-template-columns:1fr 2fr}
+.chart-card{background:#fff;border-radius:var(--radius);box-shadow:var(--sombra);padding:16px 18px;display:flex;flex-direction:column}
+.chart-card:hover{box-shadow:var(--sombra-h)}
+.chart-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px}
+.chart-title{font-size:12px;font-weight:700;color:var(--texto);line-height:1.3}
+.chart-sub{font-size:10px;color:var(--texto-s);margin-top:2px}
+.chart-badge{background:var(--celeste);color:var(--az2);font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.btn-png{background:#fff;border:1.5px solid #D0DCE8;border-radius:8px;padding:3px 8px;font-size:10px;font-weight:600;color:#4A6080;cursor:pointer;display:flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.btn-png:hover{background:#EBF5FF;border-color:var(--az2);color:var(--az2)}
+.cw{flex:1;position:relative;min-height:200px}
+.cw.t{min-height:280px}.cw.xt{min-height:360px}.cw.xxl{min-height:440px}
+.mapa-cont{border-radius:8px;overflow:hidden;position:relative}
+.leaflet-map{height:500px;border-radius:8px;z-index:1}
+.map-sel{font-size:11px;padding:5px 10px;border:1.5px solid var(--gris-borde);border-radius:6px;background:var(--gris-claro);color:var(--texto);cursor:pointer;outline:none}
+.mapa-leyenda{position:absolute;bottom:24px;left:12px;z-index:1000;background:rgba(255,255,255,.95);border-radius:8px;padding:10px 13px;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:.75rem}
+.mapa-leyenda h4{font-size:.78rem;font-weight:700;color:var(--az1);margin-bottom:6px;border-bottom:1px solid #ddd;padding-bottom:4px}
+.ley-row{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.ley-c{border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px #bbb;flex-shrink:0}
+.tabla-wrap{overflow:auto;max-height:440px;border-radius:8px;box-shadow:var(--sombra)}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead th{background:var(--az2);color:#fff;font-weight:700;padding:8px 10px;text-align:left;white-space:nowrap;font-size:10px;text-transform:uppercase;position:sticky;top:0;z-index:2}
+tbody tr:nth-child(even){background:var(--celeste)}
+tbody tr:hover{background:#D0E8F5}
+tbody td{padding:7px 10px;border-bottom:1px solid var(--gris-borde)}
+tbody td.num{text-align:right;font-weight:600}
+tbody td.rank{font-weight:800;color:var(--az2);text-align:center;width:32px}
+tr.fila-det{background:#eef3fa!important}
+tr.fila-det td{padding:8px 12px 8px 32px;font-size:.78rem}
+.cat-grid{display:flex;gap:20px;flex-wrap:wrap}
+.cat-item{display:flex;flex-direction:column;align-items:center;gap:2px}
+.cat-val{font-size:1.05rem;font-weight:700}
+.cat-lbl{font-size:.68rem;color:#777;text-transform:uppercase}
+tr.expandible{cursor:pointer}
+tr.expandible td:first-child::before{content:'▶ ';font-size:.65rem;color:#aaa}
+tr.expandible.open td:first-child::before{content:'▼ ';color:var(--az2)}
+#ficha-territorio{background:#fff;border-radius:var(--radius);box-shadow:var(--sombra);overflow:hidden}
+.ficha-head{background:linear-gradient(135deg,var(--az1),var(--az2));padding:16px 22px;color:#fff;display:flex;align-items:center;gap:14px}
+.ficha-icon{font-size:32px}
+.ficha-nombre{font-size:16px;font-weight:800}
+.ficha-sub{font-size:11px;opacity:.75;margin-top:2px}
+.ficha-body{padding:16px 20px}
+.ficha-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.f-kpi{background:var(--gris-claro);border-radius:8px;padding:10px 14px;border-left:3px solid var(--az2)}
+.f-kpi.rojo{border-left-color:var(--rojo)}.f-kpi.verde{border-left-color:var(--verde)}.f-kpi.naranja{border-left-color:var(--naranja)}
+.f-kpi-val{font-size:1.4rem;font-weight:800;color:var(--az1)}
+.f-kpi-lbl{font-size:.72rem;color:#555;margin-top:2px}
+#sin-seleccion{color:#888;font-size:.9rem;padding:30px;text-align:center}
+.home-hero{background:linear-gradient(135deg,#003F6B 0%,#005F9E 60%,#0090D0 100%);border-radius:14px;padding:26px 32px;color:#fff;margin-bottom:20px;display:flex;gap:28px;align-items:center;flex-wrap:wrap}
+.home-hero img{height:60px;border-radius:6px;flex-shrink:0}
+.home-hero-info{flex:1;min-width:200px}
+.home-hero-title{font-size:19px;font-weight:800;line-height:1.3;margin-bottom:4px}
+.home-hero-sub{font-size:12px;opacity:.78;line-height:1.6}
+.home-chips{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.home-chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:3px 11px;font-size:11px;font-weight:600}
+.home-kpis{display:flex;flex-direction:column;align-items:flex-end;gap:6px;text-align:right;flex-shrink:0}
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.info-card{background:#fff;border-radius:var(--radius);box-shadow:var(--sombra);padding:18px 20px;border-top:4px solid var(--az2)}
+.info-card h3{font-size:13px;font-weight:700;color:var(--az1);margin-bottom:8px}
+.info-card p{font-size:11px;color:var(--texto-s);line-height:1.6}
+.info-card .big{font-size:26px;font-weight:800;color:var(--az1);margin-bottom:4px}
+#loading-overlay{position:fixed;inset:0;background:rgba(0,40,100,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff}
+#loading-overlay p{margin-top:14px;font-size:1rem}
+.spinner{width:44px;height:44px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* LEYENDA MAPA */
-.mapa-leyenda{position:absolute;bottom:24px;left:12px;z-index:1000;background:rgba(255,255,255,.95);border-radius:8px;padding:10px 13px;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:.75rem;min-width:170px}
-.mapa-leyenda h4{font-size:.78rem;font-weight:700;color:var(--azul-oscuro);margin-bottom:7px;border-bottom:1px solid #ddd;padding-bottom:4px}
-.ley-row{display:flex;align-items:center;gap:7px;margin-bottom:5px}
-.ley-circulo{border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px #bbb;flex-shrink:0}
-.ley-sep{border-top:1px dashed #ddd;margin:6px 0}
-
-/* TABLA EXPANDIBLE */
-tr.fila-detalle { background: #eef3fa !important; }
-tr.fila-detalle td { padding: 8px 12px 8px 32px; font-size:.78rem; color:#444; }
-.cat-grid { display:flex; gap:24px; flex-wrap:wrap; }
-.cat-item { display:flex; flex-direction:column; align-items:center; gap:2px; }
-.cat-val { font-size:1.1rem; font-weight:700; color:var(--azul-oscuro); }
-.cat-lbl { font-size:.7rem; color:#777; text-transform:uppercase; letter-spacing:.04em; }
-.cat-leve { color: var(--azul); }
-.cat-mod  { color: #e67e22; }
-.cat-av   { color: var(--rojo); }
-tr.expandible { cursor:pointer; }
-tr.expandible:hover td { background:#f0f4fb; }
-tr.expandible td:first-child::before { content:'▶ '; font-size:.7rem; color:#aaa; margin-right:2px; transition:.2s; }
-tr.expandible.abierto td:first-child::before { content:'▼ '; color:var(--azul); }
-
-/* RESPONSIVE FIXES */
-@media(max-width:500px){
-  #header{padding:8px 12px}
-  #header img{height:38px}
-  #header-texto h1{font-size:1rem}
-  .kpi-valor{font-size:1.3rem}
-}
+.footer{background:var(--az1);color:rgba(255,255,255,.6);text-align:center;padding:12px 24px;font-size:10px;margin-top:10px}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}.g2,.g3,.g2c,.gc2{grid-template-columns:1fr}.cards-grid{grid-template-columns:1fr}.ficha-kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.header-inner{padding:8px 12px}.main{padding:12px 12px 30px}.kpi-row{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
+<div id="loading-overlay"><div class="spinner"></div><p>Cargando datos…</p></div>
 
-<div id="loading"><div class="spinner"></div><p>Cargando datos…</p></div>
-
-<div id="header">
-  <img id="logo-minsal" src="" alt="MINSAL"/>
-  <div id="header-texto">
-    <h1>Dashboard de Abordaje de las Demencias en Atención Primaria de Salud</h1>
-    <p>División de Atención Primaria (DIVAP) · Ministerio de Salud de Chile</p>
-  </div>
-</div>
-
-<div id="filtros">
-  <div class="filtro-grupo">
-    <label>Año</label>
-    <select id="f-anio"><option value="">Todos los años</option></select>
-  </div>
-  <div class="filtro-grupo">
-    <label>Servicio de Salud</label>
-    <select id="f-ss"><option value="">Todos</option></select>
-  </div>
-  <div class="filtro-grupo">
-    <label>Comuna</label>
-    <select id="f-comuna"><option value="">Todas</option></select>
-  </div>
-  <div class="filtro-grupo">
-    <label>Establecimiento</label>
-    <select id="f-estab"><option value="">Todos</option></select>
-  </div>
-  <div class="filtro-grupo">
-    <label>Tipo</label>
-    <select id="f-tipo"><option value="">Todos</option></select>
-  </div>
-  <div class="filtro-grupo">
-    <label>Dependencia</label>
-    <select id="f-dep"><option value="">Todas</option></select>
-  </div>
-  <button id="btn-limpiar">✕ Limpiar filtros</button>
-</div>
-
-<div id="contexto-filtros">Mostrando: Todo el país · Todos los años</div>
-
-<div id="kpis">
-  <div class="kpi"><div class="kpi-valor" id="kpi-pbc">–</div><div class="kpi-label">Población Bajo Control</div><div class="kpi-sub" id="kpi-pbc-sub"></div></div>
-  <div class="kpi"><div class="kpi-valor" id="kpi-estabs">–</div><div class="kpi-label">Establecimientos</div><div class="kpi-sub" id="kpi-estabs-sub"></div></div>
-  <div class="kpi"><div class="kpi-valor" id="kpi-comunas">–</div><div class="kpi-label">Comunas</div><div class="kpi-sub"></div></div>
-  <div class="kpi"><div class="kpi-valor" id="kpi-ss">–</div><div class="kpi-label">Servicios de Salud</div><div class="kpi-sub"></div></div>
-  <div class="kpi"><div class="kpi-valor" id="kpi-variacion">–</div><div class="kpi-label" id="kpi-var-label">Variación</div><div class="kpi-sub" id="kpi-var-sub"></div></div>
-</div>
-
-<div id="tabs">
-  <div class="tab activo" data-panel="panel-nacional">📊 Nacional</div>
-  <div class="tab" data-panel="panel-territorio">📋 Por Territorio</div>
-  <div class="tab" data-panel="panel-mapa">🗺️ Mapa</div>
-  <div class="tab" data-panel="panel-tabla">📄 Tabla</div>
-</div>
-
-<div id="contenido">
-
-  <!-- PANEL NACIONAL -->
-  <div class="panel activo" id="panel-nacional">
-    <div class="grilla-2">
-      <div class="tarjeta">
-        <h3>Población Bajo Control de Demencias por Año</h3>
-        <div class="subtitulo" id="sub-evolucion"></div>
-        <button class="btn-png" onclick="descargarPNG('chart-evolucion','Evolución PBC Demencias')">⬇ PNG</button>
-        <div class="canvas-wrap"><canvas id="chart-evolucion"></canvas></div>
-      </div>
-      <div class="tarjeta">
-        <h3>PBC por Servicio de Salud</h3>
-        <div class="subtitulo" id="sub-ss"></div>
-        <button class="btn-png" onclick="descargarPNG('chart-ss','PBC por Servicio de Salud')">⬇ PNG</button>
-        <div class="canvas-wrap"><canvas id="chart-ss"></canvas></div>
-      </div>
-      <div class="tarjeta">
-        <h3>PBC por Tipo de Establecimiento</h3>
-        <div class="subtitulo" id="sub-tipo"></div>
-        <button class="btn-png" onclick="descargarPNG('chart-tipo','PBC por Tipo de Establecimiento')">⬇ PNG</button>
-        <div class="canvas-wrap"><canvas id="chart-tipo"></canvas></div>
-      </div>
-      <div class="tarjeta">
-        <h3>PBC por Dependencia</h3>
-        <div class="subtitulo" id="sub-dep"></div>
-        <button class="btn-png" onclick="descargarPNG('chart-dep','PBC por Dependencia')">⬇ PNG</button>
-        <div class="canvas-wrap"><canvas id="chart-dep"></canvas></div>
-      </div>
+<header class="header">
+  <div class="header-inner">
+    <div class="header-logo"><img id="logo-minsal" src="" alt="MINSAL"></div>
+    <div class="header-title">
+      <h1>Dashboard de Abordaje de las Demencias en Atención Primaria de Salud</h1>
+      <div class="hsub">División de Atención Primaria (DIVAP) · Ministerio de Salud de Chile · Datos 2014–2025</div>
     </div>
-    <div id="wrap-categorias" style="display:none">
-      <div class="tarjeta">
-        <h3>Distribución por Severidad (Leve / Moderada / Avanzada)</h3>
-        <div class="subtitulo" id="sub-cat"></div>
-        <button class="btn-png" onclick="descargarPNG('chart-cat','Distribución por Severidad')">⬇ PNG</button>
-        <div class="canvas-wrap"><canvas id="chart-cat"></canvas></div>
-      </div>
+    <div class="header-meta">
+      <div class="meta-chip">📅 2014–2025</div>
+      <div class="meta-chip" id="chip-estabs">⏳</div>
+      <div class="meta-chip">🗺️ 29 SS</div>
     </div>
   </div>
+</header>
 
-  <!-- PANEL TERRITORIO -->
-  <div class="panel" id="panel-territorio">
-    <div id="ficha-territorio">
-      <div id="sin-seleccion">Selecciona un Servicio de Salud, Comuna o Establecimiento en los filtros para ver la ficha de territorio.</div>
-      <div id="ficha-contenido" style="display:none">
-        <h2 id="ficha-titulo"></h2>
-        <div class="ficha-kpis">
-          <div class="ficha-kpi"><div class="ficha-kpi-val" id="ft-pbc">–</div><div class="ficha-kpi-lbl" id="ft-pbc-lbl">Total PBC (último año)</div></div>
-          <div class="ficha-kpi"><div class="ficha-kpi-val" id="ft-estabs">–</div><div class="ficha-kpi-lbl">Establecimientos</div></div>
-          <div class="ficha-kpi"><div class="ficha-kpi-val" id="ft-prom">–</div><div class="ficha-kpi-lbl">PBC Promedio por establec.</div></div>
-          <div class="ficha-kpi"><div class="ficha-kpi-val" id="ft-var">–</div><div class="ficha-kpi-lbl" id="ft-var-lbl">Variación</div></div>
-        </div>
-        <div class="grilla-2">
-          <div class="tarjeta">
-            <h3>Evolución PBC</h3>
-            <div class="mini-chart-wrap"><canvas id="mini-evolucion"></canvas></div>
-          </div>
-          <div class="tarjeta">
-            <h3>Distribución por Tipo</h3>
-            <div class="mini-chart-wrap"><canvas id="mini-tipo"></canvas></div>
-          </div>
-          <div class="tarjeta" id="wrap-mini-cat" style="display:none">
-            <h3>Severidad <span id="mini-cat-año"></span></h3>
-            <div class="mini-chart-wrap"><canvas id="mini-cat"></canvas></div>
-          </div>
-        </div>
-        <div class="tarjeta" style="margin-top:14px">
-          <h3>Top Establecimientos</h3>
-          <div class="tabla-wrap" style="max-height:300px">
-            <table id="tabla-top">
-              <thead id="thead-top"><tr></tr></thead>
-              <tbody id="tbody-top"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+<nav class="tabs-bar">
+  <div class="tabs-inner">
+    <button class="tab-btn active" onclick="switchTab('home',this)">🏠 Inicio</button>
+    <button class="tab-btn" onclick="switchTab('pbc',this)">👥 PBC Total</button>
+    <button class="tab-btn" onclick="switchTab('sev',this)">🧩 Severidad</button>
+    <button class="tab-btn" onclick="switchTab('mapa',this)">🗺️ Mapa</button>
+    <button class="tab-btn" onclick="switchTab('tabla',this)">📄 Tabla</button>
+    <button class="tab-btn" onclick="switchTab('terr',this)">📋 Por Territorio</button>
+  </div>
+</nav>
+
+<div class="filtros-bar">
+  <div class="filtros-inner">
+    <div class="filtro-group"><label>Año</label><select class="filtro" id="f-anio"><option value="all">Todos</option></select></div>
+    <div class="filtro-group"><label>Servicio de Salud</label><select class="filtro" id="f-ss"><option value="">Todos</option></select></div>
+    <div class="filtro-group"><label>Comuna</label><select class="filtro" id="f-comuna"><option value="">Todas</option></select></div>
+    <div class="filtro-group"><label>Establecimiento</label><select class="filtro" id="f-estab"><option value="">Todos</option></select></div>
+    <div class="filtro-group"><label>Tipo</label><select class="filtro" id="f-tipo"><option value="">Todos</option></select></div>
+    <div class="filtro-group"><label>Dependencia</label><select class="filtro" id="f-dep"><option value="">Todas</option></select></div>
+    <button class="btn-reset" onclick="resetFiltros()">✕ Limpiar</button>
+    <span class="filtros-count" id="filtros-count"></span>
+  </div>
+</div>
+
+<!-- TAB HOME -->
+<div class="tab-content active" id="tab-home"><div class="main">
+  <div class="home-hero">
+    <img id="logo-hero" src="" alt="MINSAL">
+    <div class="home-hero-info">
+      <div class="home-hero-title">Dashboard de Abordaje de las Demencias en APS</div>
+      <div class="home-hero-sub">División de Atención Primaria · MINSAL Chile · Datos DEIS 2014–2025<br>Población Bajo Control (PBC) de Demencias en establecimientos de Atención Primaria de Salud</div>
+      <div class="home-chips"><span class="home-chip">📅 2014–2025</span><span class="home-chip" id="home-chip-estabs">⏳</span><span class="home-chip">🗺️ 29 SS</span></div>
+    </div>
+    <div class="home-kpis">
+      <div><div style="font-size:24px;font-weight:800" id="home-pbc-total">—</div><div style="font-size:10px;opacity:.7">PBC 2025</div></div>
+      <div><div style="font-size:18px;font-weight:800;color:#90EE90" id="home-var">—</div><div style="font-size:10px;opacity:.7">Variación 2014→2025</div></div>
     </div>
   </div>
+  <div class="cards-grid">
+    <div class="info-card"><h3>👥 Población Bajo Control 2025</h3><div class="big" id="home-c-pbc">—</div><p>Personas con demencia bajo control en APS. Incluye todos los establecimientos con registro activo al año 2025.</p></div>
+    <div class="info-card" style="border-top-color:var(--verde)"><h3>🏥 Establecimientos Activos</h3><div class="big" style="color:var(--verde)" id="home-c-estab">—</div><p>Centros de salud primaria con al menos una persona bajo control por demencia durante 2025.</p></div>
+    <div class="info-card" style="border-top-color:var(--rojo)"><h3>📈 Crecimiento 2014–2025</h3><div class="big" style="color:var(--rojo)" id="home-c-crec">—</div><p>Incremento en la PBC de demencias, reflejo del avance en detección y cobertura en APS.</p></div>
+  </div>
+  <div class="sec-title">📊 Tendencia Nacional 2014–2025</div><div class="sec-sep"></div>
+  <div class="charts-grid g1">
+    <div class="chart-card">
+      <div class="chart-header"><div><div class="chart-title">Evolución de la Población Bajo Control de Demencias por Año</div><div class="chart-sub">Total nacional — establecimientos de APS</div></div><button class="btn-png" onclick="downloadNearestChart(this)">📥 PNG</button></div>
+      <div class="cw t"><canvas id="home-c-tend"></canvas></div>
+    </div>
+  </div>
+</div></div>
 
-  <!-- PANEL MAPA -->
-  <div class="panel" id="panel-mapa">
-    <div id="mapa-wrap" style="position:relative">
-      <div id="mapa"></div>
+<!-- TAB PBC -->
+<div class="tab-content" id="tab-pbc"><div class="main">
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-label">Total PBC</div><div class="kpi-value sm" id="p-kpi-total">—</div><div class="kpi-sub" id="p-kpi-sub">—</div></div>
+    <div class="kpi-card verde"><div class="kpi-icon">🏥</div><div class="kpi-label">Establecimientos</div><div class="kpi-value" id="p-kpi-estab">—</div><div class="kpi-sub">Con PBC registrada</div></div>
+    <div class="kpi-card naranja"><div class="kpi-icon">📊</div><div class="kpi-label">Promedio / estab.</div><div class="kpi-value sm" id="p-kpi-prom">—</div><div class="kpi-sub">Personas por centro</div></div>
+    <div class="kpi-card rojo"><div class="kpi-icon">📈</div><div class="kpi-label">Año más alto</div><div class="kpi-value sm" id="p-kpi-best">—</div><div class="kpi-sub" id="p-kpi-best-val">—</div></div>
+    <div class="kpi-card morado"><div class="kpi-icon">🥇</div><div class="kpi-label">SS Líder</div><div class="kpi-value xs" id="p-kpi-ss">—</div><div class="kpi-sub" id="p-kpi-ss-val">—</div></div>
+  </div>
+  <div class="sec-title">📈 Tendencia Temporal</div><div class="sec-sep"></div>
+  <div class="charts-grid g1">
+    <div class="chart-card">
+      <div class="chart-header"><div><div class="chart-title">Evolución PBC Demencias por Año (2014–2025)</div><div class="chart-sub" id="p-sub-tend">Nacional</div></div><div style="display:flex;gap:6px"><div class="chart-badge" id="p-badge">Nacional</div><button class="btn-png" onclick="downloadNearestChart(this)">📥 PNG</button></div></div>
+      <div class="cw t"><canvas id="p-c-tend"></canvas></div>
+    </div>
+  </div>
+  <div class="charts-grid g2">
+    <div class="chart-card">
+      <div class="chart-header"><div><div class="chart-title">PBC por Servicio de Salud</div><div class="chart-sub">Comparación 29 SS</div></div><button class="btn-png" onclick="downloadNearestChart(this)">📥 PNG</button></div>
+      <div class="cw xt"><canvas id="p-c-ss"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header"><div><div class="chart-title">Variación % Año a Año</div><div class="chart-sub">Cambio porcentual respecto al año anterior</div></div><button class="btn-png" onclick="downloadNearestChart(this)">📥 PNG</button></div>
+      <div class="cw xt"><canvas id="p-c-var"></canvas></div>
+    </div>
+  </div>
+  <div class="sec-title">🏷️ Tipo y Dependencia</div><div class="sec-sep"></div>
+  <div class="charts-grid g2c">
+    <div class="chart-card">
+      <div class="chart-header"><div><div class="chart-title">PBC por Tipo de Establecimiento</div><div class="chart-sub">Evolución por tipo — barras apiladas</div></div><button class="btn-png" onclick="downloadNearestChart(this)">📥 PNG</button></div>
+      <div class="cw t"><canvas id="p-c-tipo"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header"><div><div class="chart-title">PBC por Dependencia</div><div class="chart-sub">Municipal / SS / Otra</div></div><button class="btn-png" onclick="downloadNearestChart(this)">📥 PNG</button></div>
+      <div class="cw t"><canvas id="p-c-dep"></canvas></div>
+    </div>
+  </div>
+  <div class="sec-title">🏆 Top 20 Establecimientos</div><div class="sec-sep"></div>
+  <div class="chart-card">
+    <div class="chart-header"><div><div class="chart-title">Top 20 Establecimientos por PBC</div><div class="chart-sub" id="p-sub-top">—</div></div><button class="btn-png" onclick="downloadNearestChart(this)">📥 PNG</button></div>
+    <div class="cw xxl"><canvas id="p-c-top"></canvas></div>
+  </div>
+</div></div>
+
+<!-- TAB SEVERIDAD -->
+<div class="tab-content" id="tab-sev"><div class="main">
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-icon">🧩</div><div class="kpi-label">PBC con severidad</div><div class="kpi-value sm" id="s-kpi-total">—</div><div class="kpi-sub" id="s-kpi-sub">—</div></div>
+    <div class="kpi-card leve"><div class="kpi-icon">🟦</div><div class="kpi-label">Leve</div><div class="kpi-value sm" id="s-kpi-l">—</div><div class="kpi-sub" id="s-kpi-l-pct">—</div></div>
+    <div class="kpi-card mod"><div class="kpi-icon">🟧</div><div class="kpi-label">Moderada</div><div class="kpi-value sm" id="s-kpi-m">—</div><div class="kpi-sub" id="s-kpi-m-pct">—</div></div>
+    <div class="kpi-card av"><div class="kpi-icon">🟥</div><div class="kpi-label">Avanzada</div><div class="kpi-value sm" id="s-kpi-a">—</div><div class="kpi-sub" id="s-kpi-a-pct">—</div></div>
+    <div class="kpi-card naranja"><div class="kpi-icon">📊</div><div class="kpi-label">% Leve del total</div><div class="kpi-value sm" id="s-kpi-pct-l">—</div><div class="kpi-sub">Proporción leve</div></div>
+  </div>
+  <div class="sec-title">📊 Distribución por Severidad</div><div class="sec-sep"></div>
+  <div class="charts-grid g2">
+    <div class="chart-card">
+      <div class="chart-header"><div><div class="chart-title">Evolución PBC por Severidad (2017–2025)</div><div class="chart-sub">Leve / Moderada / Avanzada — apilado</div></div><button class="btn-png" onclick="downloadNearestChart(this)">📥 PNG</button></div>
+      <div class="cw t"><canvas id="s-c-tend"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header"><div><div class="chart-title">Distribución por Severidad</div><div class="chart-sub" id="s-sub-dona">—</div></div><button class="btn-png" onclick="downloadNearestChart(this)">📥 PNG</button></div>
+      <div class="cw t"><canvas id="s-c-dona"></canvas></div>
+    </div>
+  </div>
+  <div class="sec-title">🗺️ Severidad por Servicio de Salud</div><div class="sec-sep"></div>
+  <div class="chart-card">
+    <div class="chart-header"><div><div class="chart-title">PBC por Severidad y Servicio de Salud</div><div class="chart-sub" id="s-sub-ss">Barras apiladas — Leve / Moderada / Avanzada</div></div><button class="btn-png" onclick="downloadNearestChart(this)">📥 PNG</button></div>
+    <div class="cw xxl"><canvas id="s-c-ss"></canvas></div>
+  </div>
+</div></div>
+
+<!-- TAB MAPA -->
+<div class="tab-content" id="tab-mapa"><div class="main">
+  <div class="chart-card">
+    <div class="chart-header">
+      <div><div class="chart-title">Mapa de Establecimientos — PBC Demencias</div><div class="chart-sub">Tamaño proporcional al PBC · Clic para detalle</div></div>
+      <div style="display:flex;gap:8px;align-items:center"><label style="font-size:11px;font-weight:600;color:var(--texto-s)">Año:</label><select class="map-sel" id="mapa-year"></select></div>
+    </div>
+    <div class="mapa-cont">
+      <div id="el-mapa" class="leaflet-map"></div>
       <div class="mapa-leyenda">
         <h4>Simbología</h4>
-        <div style="font-size:.72rem;font-weight:600;color:#555;margin-bottom:5px">Color según PBC</div>
-        <div class="ley-row"><div class="ley-circulo" style="width:14px;height:14px;background:#005F9E"></div><span>1 – 50</span></div>
-        <div class="ley-row"><div class="ley-circulo" style="width:14px;height:14px;background:#e67e22"></div><span>51 – 200</span></div>
-        <div class="ley-row"><div class="ley-circulo" style="width:14px;height:14px;background:#C0392B"></div><span>> 200</span></div>
-        <div class="ley-sep"></div>
-        <div style="font-size:.72rem;font-weight:600;color:#555;margin-bottom:5px">Tamaño según PBC</div>
-        <div class="ley-row"><div class="ley-circulo" style="width:8px;height:8px;background:#888"></div><span>Bajo</span></div>
-        <div class="ley-row"><div class="ley-circulo" style="width:14px;height:14px;background:#888"></div><span>Medio</span></div>
-        <div class="ley-row"><div class="ley-circulo" style="width:20px;height:20px;background:#888"></div><span>Alto</span></div>
-        <div class="ley-sep"></div>
+        <div style="font-size:.7rem;font-weight:600;color:#555;margin-bottom:4px">Color según PBC</div>
+        <div class="ley-row"><div class="ley-c" style="width:12px;height:12px;background:#005F9E"></div><span>1–50</span></div>
+        <div class="ley-row"><div class="ley-c" style="width:12px;height:12px;background:#E67E22"></div><span>51–200</span></div>
+        <div class="ley-row"><div class="ley-c" style="width:12px;height:12px;background:#C0392B"></div><span>&gt; 200</span></div>
+        <div style="margin:5px 0;border-top:1px dashed #ddd"></div>
         <div style="font-size:.7rem;color:#888">Clic en círculo para detalle</div>
       </div>
     </div>
   </div>
+</div></div>
 
-  <!-- PANEL TABLA -->
-  <div class="panel" id="panel-tabla">
-    <div class="tabla-wrap">
-      <table>
-        <thead id="thead-tabla"><tr></tr></thead>
-        <tbody id="tbody-tabla"></tbody>
-      </table>
+<!-- TAB TABLA -->
+<div class="tab-content" id="tab-tabla"><div class="main">
+  <div class="chart-card">
+    <div class="chart-header"><div><div class="chart-title">Tabla de Establecimientos</div><div class="chart-sub">PBC por año · Clic en fila para ver desglose de severidad (▶)</div></div></div>
+    <div class="tabla-wrap"><table><thead><tr id="thead-row"></tr></thead><tbody id="tbody-tabla"></tbody></table></div>
+  </div>
+</div></div>
+
+<!-- TAB TERRITORIO -->
+<div class="tab-content" id="tab-terr"><div class="main">
+  <div id="ficha-territorio">
+    <div id="sin-seleccion">Selecciona un <strong>Servicio de Salud</strong>, <strong>Comuna</strong> o <strong>Establecimiento</strong> en los filtros para ver la ficha de territorio.</div>
+    <div id="ficha-contenido" style="display:none">
+      <div class="ficha-head"><div class="ficha-icon" id="ficha-icon">🗺️</div><div><div class="ficha-nombre" id="ficha-nombre">—</div><div class="ficha-sub" id="ficha-sub">—</div></div></div>
+      <div class="ficha-body">
+        <div class="ficha-kpis">
+          <div class="f-kpi"><div class="f-kpi-val" id="ft-pbc">—</div><div class="f-kpi-lbl" id="ft-pbc-lbl">PBC último año</div></div>
+          <div class="f-kpi verde"><div class="f-kpi-val" id="ft-estab">—</div><div class="f-kpi-lbl">Establecimientos</div></div>
+          <div class="f-kpi naranja"><div class="f-kpi-val" id="ft-prom">—</div><div class="f-kpi-lbl">Promedio / estab.</div></div>
+          <div class="f-kpi rojo"><div class="f-kpi-val" id="ft-var">—</div><div class="f-kpi-lbl" id="ft-var-lbl">Variación</div></div>
+        </div>
+        <div class="charts-grid g2" style="margin-bottom:14px">
+          <div class="chart-card" style="box-shadow:none;border:1.5px solid var(--gris-borde)"><div class="chart-title" style="margin-bottom:8px">Evolución PBC</div><div class="cw" style="min-height:180px"><canvas id="ft-c-tend"></canvas></div></div>
+          <div class="chart-card" style="box-shadow:none;border:1.5px solid var(--gris-borde)"><div class="chart-title" style="margin-bottom:8px">Distribución por Tipo</div><div class="cw" style="min-height:180px"><canvas id="ft-c-tipo"></canvas></div></div>
+          <div class="chart-card" style="box-shadow:none;border:1.5px solid var(--gris-borde)"><div class="chart-title" style="margin-bottom:8px">Severidad <span id="ft-sev-año"></span></div><div class="cw" style="min-height:180px"><canvas id="ft-c-sev"></canvas></div></div>
+          <div class="chart-card" style="box-shadow:none;border:1.5px solid var(--gris-borde)"><div class="chart-title" style="margin-bottom:8px">PBC por Dependencia</div><div class="cw" style="min-height:180px"><canvas id="ft-c-dep"></canvas></div></div>
+        </div>
+        <div class="sec-title">🏆 Top Establecimientos</div><div class="sec-sep"></div>
+        <div class="tabla-wrap" style="max-height:280px"><table><thead><tr id="ft-thead-row"></tr></thead><tbody id="ft-tbody"></tbody></table></div>
+      </div>
     </div>
   </div>
+</div></div>
 
-</div><!-- fin contenido -->
+<footer class="footer">DIVAP · División de Atención Primaria · Ministerio de Salud de Chile · Dashboard Demencias APS 2014–2025</footer>
 
 <script>
-// ─── LOGO MINSAL ────────────────────────────────────────────────
-document.getElementById('logo-minsal').src = 'data:image/png;base64,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';
+let DATA=[],PKG={},YEARS=[],YEARS_CAT=[],SS=[],COM=[],TIP=[],DEP=[],TC=[];
+let charts={},miniCharts={},mapaLeaflet=null,marcadores=[];
+let F={anio:'all',ss:'',comuna:'',estab:'',tipo:'',dep:''};
+let CTX_STR='Nacional · 2014–2025';
+const AZ='#005F9E',RJ='#C0392B',NR='#E67E22',VD='#2E8B57',MR='#7c3aed';
+const COLS=[AZ,'#25306B',RJ,NR,VD,MR,'#16a085','#2980b9'];
 
-// ─── ESTADO GLOBAL ──────────────────────────────────────────────
-let DATA = null;
-let charts = {};
-let mapaLeaflet = null;
-let marcadores = [];
-let miniCharts = {};
+function gp(d,y){const i=YEARS.indexOf(String(y));return i>=0?(d.p[i]||0):0;}
+function gl(d,y){const i=YEARS.indexOf(String(y));return i>=0?(d.l[i]||0):0;}
+function gm(d,y){const i=YEARS.indexOf(String(y));return i>=0?(d.m[i]||0):0;}
+function ga(d,y){const i=YEARS.indexOf(String(y));return i>=0?(d.a[i]||0):0;}
+function esCat(a){return YEARS_CAT.includes(String(a));}
+function fmt(n){return Math.round(n||0).toLocaleString('es-CL');}
+function fmtPct(n){return (n||0).toFixed(1)+'%';}
 
-const COLORES = ['#005F9E','#25306B','#C0392B','#2980b9','#8e44ad','#16a085','#e67e22','#27ae60'];
-const AZUL = '#005F9E';
-const ROJO = '#C0392B';
+fetch('datos.json').then(r=>r.json()).then(pkg=>{
+  PKG=pkg; YEARS=pkg.años; YEARS_CAT=pkg.años_cat;
+  SS=pkg.ss; COM=pkg.com; TIP=pkg.tip; DEP=pkg.dep; TC=pkg.tc;
+  DATA=pkg.rows.map(r=>({
+    id:r[0],n:r[1],s:SS[r[2]],c:COM[r[3]],t:TIP[r[4]],dep:DEP[r[5]],tc:TC[r[6]],
+    lat:r[7],lon:r[8],tp:r[9],p:r[10],l:r[11],m:r[12],a:r[13]
+  }));
+  init();
+  document.getElementById('loading-overlay').style.display='none';
+}).catch(()=>document.getElementById('loading-overlay').innerHTML='<p style="color:#f88">Error al cargar datos.json</p>');
 
-// ─── CARGA DE DATOS ─────────────────────────────────────────────
-fetch('datos.json')
-  .then(r => r.json())
-  .then(d => {
-    DATA = d;
-    inicializar();
-    document.getElementById('loading').style.display = 'none';
-  })
-  .catch(e => {
-    document.getElementById('loading').innerHTML = '<p style="color:#f88">Error al cargar datos.json</p>';
-  });
+function init(){
+  const ult=YEARS[YEARS.length-1];
+  const n=DATA.filter(d=>gp(d,ult)>0).length;
+  document.getElementById('chip-estabs').textContent=`🏥 ${n.toLocaleString('es-CL')} centros`;
+  document.getElementById('home-chip-estabs').textContent=`🏥 ${n.toLocaleString('es-CL')} centros activos`;
 
-// ─── INICIALIZAR ────────────────────────────────────────────────
-function inicializar() {
-  poblarFiltros();
+  YEARS.forEach(y=>addOpt('f-anio',y,y));
+  const my=document.getElementById('mapa-year');
+  YEARS.forEach(y=>addOpt_el(my,y,y));
+  my.value=ult;
+  my.addEventListener('change',()=>actualizarMapa(filteredData()));
+
+  SS.forEach(s=>addOpt('f-ss',s,s));
+  TIP.forEach(t=>addOpt('f-tipo',t,t));
+  DEP.forEach(d=>addOpt('f-dep',d.trim(),d.trim()));
+  rebuiltComunas();
+
+  document.getElementById('f-anio').addEventListener('change',e=>{F.anio=e.target.value;actualizarTodo();});
+  document.getElementById('f-ss').addEventListener('change',e=>{F.ss=e.target.value;F.comuna='';F.estab='';rebuiltComunas();rebuiltEstabs();actualizarTodo();});
+  document.getElementById('f-comuna').addEventListener('change',e=>{F.comuna=e.target.value;F.estab='';rebuiltEstabs();actualizarTodo();});
+  document.getElementById('f-estab').addEventListener('change',e=>{F.estab=e.target.value;actualizarTodo();});
+  document.getElementById('f-tipo').addEventListener('change',e=>{F.tipo=e.target.value;actualizarTodo();});
+  document.getElementById('f-dep').addEventListener('change',e=>{F.dep=e.target.value;actualizarTodo();});
   actualizarTodo();
-  bindEventos();
+  // Logo
+  const LOGO='data:image/png;base64,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';
+  ['logo-minsal','logo-hero'].forEach(id=>{const el=document.getElementById(id);if(el)el.src=LOGO;});
 }
 
-function poblarFiltros() {
-  const años = DATA.meta.años;
-  const fAnio = document.getElementById('f-anio');
-  años.forEach(a => {
-    const o = document.createElement('option');
-    o.value = a; o.textContent = a;
-    fAnio.appendChild(o);
-  });
+function addOpt(sel,val,txt){const o=document.createElement('option');o.value=val;o.textContent=txt;document.getElementById(sel).appendChild(o);}
+function addOpt_el(el,val,txt){const o=document.createElement('option');o.value=val;o.textContent=txt;el.appendChild(o);}
 
-  DATA.lookup.ss.forEach((ss, i) => agregarOpcion('f-ss', i, ss));
-  DATA.lookup.tipos.forEach((t, i) => agregarOpcion('f-tipo', i, t));
-  DATA.lookup.dependencias.forEach((d, i) => agregarOpcion('f-dep', i, d));
+function rebuiltComunas(){
+  const fd=DATA.filter(d=>(!F.ss||d.s===F.ss)&&(!F.tipo||d.t===F.tipo)&&(!F.dep||d.dep.trim()===F.dep));
+  const coms=[...new Set(fd.map(d=>d.c))].sort();
+  const sel=document.getElementById('f-comuna');
+  const cur=sel.value; sel.innerHTML='<option value="">Todas</option>';
+  coms.forEach(c=>addOpt_el(sel,c,c));
+  sel.value=coms.includes(cur)?cur:''; F.comuna=sel.value;
 }
-
-function agregarOpcion(id, val, texto) {
-  const o = document.createElement('option');
-  o.value = val; o.textContent = texto;
-  document.getElementById(id).appendChild(o);
+function rebuiltEstabs(){
+  const fd=DATA.filter(d=>(!F.ss||d.s===F.ss)&&(!F.comuna||d.c===F.comuna)&&(!F.tipo||d.t===F.tipo)&&(!F.dep||d.dep.trim()===F.dep));
+  const sel=document.getElementById('f-estab');
+  const cur=sel.value; sel.innerHTML='<option value="">Todos</option>';
+  [...fd].sort((a,b)=>a.n.localeCompare(b.n,'es')).forEach(d=>addOpt_el(sel,String(d.id),d.n));
+  sel.value=fd.find(d=>String(d.id)===cur)?cur:''; F.estab=sel.value;
 }
-
-// ─── FILTROS EN CASCADA ─────────────────────────────────────────
-function getFiltros() {
-  return {
-    anio: document.getElementById('f-anio').value,
-    ss: document.getElementById('f-ss').value,
-    comuna: document.getElementById('f-comuna').value,
-    estab: document.getElementById('f-estab').value,
-    tipo: document.getElementById('f-tipo').value,
-    dep: document.getElementById('f-dep').value
-  };
-}
-
-function getEstabsFiltrados() {
-  const f = getFiltros();
-  return DATA.establecimientos.filter(e => {
-    if (f.ss !== '' && String(e[2]) !== f.ss) return false;
-    if (f.comuna !== '' && String(e[3]) !== f.comuna) return false;
-    if (f.estab !== '' && String(e[0]) !== f.estab) return false;
-    if (f.tipo !== '' && String(e[4]) !== f.tipo) return false;
-    if (f.dep !== '' && String(e[5]) !== f.dep) return false;
+function filteredData(){
+  return DATA.filter(d=>{
+    if(F.ss&&d.s!==F.ss)return false;
+    if(F.comuna&&d.c!==F.comuna)return false;
+    if(F.estab&&String(d.id)!==F.estab)return false;
+    if(F.tipo&&d.t!==F.tipo)return false;
+    if(F.dep&&d.dep.trim()!==F.dep)return false;
     return true;
   });
 }
-
-function getPBCEstab(e, anio) {
-  if (anio) return getPBCVal(e[9][anio]);
-  return DATA.meta.años.reduce((s, a) => s + getPBCVal(e[9][a]), 0);
+function resetFiltros(){
+  F={anio:'all',ss:'',comuna:'',estab:'',tipo:'',dep:''};
+  ['f-anio','f-ss','f-tipo','f-dep'].forEach(id=>document.getElementById(id).value=id==='f-anio'?'all':'');
+  rebuiltComunas();rebuiltEstabs();actualizarTodo();
+}
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='mapa'){actualizarMapa(filteredData());setTimeout(()=>mapaLeaflet&&mapaLeaflet.invalidateSize(),150);}
 }
 
-function getPBCVal(v) {
-  if (!v) return 0;
-  if (typeof v === 'object') return v.t || 0;
-  return v || 0;
+function actualizarTodo(){
+  const fd=filteredData();
+  const anio=F.anio;
+  const ult=YEARS[YEARS.length-1];
+  const parts=[];
+  if(anio!=='all')parts.push('Año '+anio);else parts.push('2014–2025');
+  if(F.estab){const d=DATA.find(x=>String(x.id)===F.estab);if(d)parts.push(d.n);}
+  else if(F.comuna)parts.push('Comuna: '+F.comuna);
+  else if(F.ss)parts.push(F.ss);
+  else parts.push('Nacional');
+  if(F.tipo)parts.push(F.tipo);
+  if(F.dep)parts.push(F.dep);
+  CTX_STR=parts.join(' · ');
+  document.getElementById('filtros-count').textContent=fd.length.toLocaleString('es-CL')+' establecimientos';
+  kpisHome(fd);kpisPBC(fd);kpisSev(fd);
+  grafPBC(fd);grafSev(fd);
+  actualizarTabla(fd);actualizarFicha(fd);
+  if(document.getElementById('tab-mapa').classList.contains('active'))actualizarMapa(fd);
 }
 
-function esCat(anio) {
-  return DATA.meta.años_cat && DATA.meta.años_cat.includes(String(anio));
+function kpisHome(fd){
+  const ult=YEARS[YEARS.length-1],pri=YEARS[0];
+  const tu=fd.reduce((s,d)=>s+gp(d,ult),0);
+  const tp=fd.reduce((s,d)=>s+gp(d,pri),0);
+  const vp=tp>0?((tu-tp)/tp*100):null;
+  document.getElementById('home-pbc-total').textContent=fmt(tu);
+  document.getElementById('home-var').textContent=vp!==null?(vp>=0?'+':'')+vp.toFixed(0)+'%':'N/D';
+  document.getElementById('home-c-pbc').textContent=fmt(tu);
+  document.getElementById('home-c-estab').textContent=fd.filter(d=>gp(d,ult)>0).length.toLocaleString('es-CL');
+  document.getElementById('home-c-crec').textContent=vp!==null?(vp>=0?'+':'')+vp.toFixed(0)+'%':'N/D';
+  const py=YEARS.map(y=>fd.reduce((s,d)=>s+gp(d,y),0));
+  mkC('home-c-tend','bar',YEARS,[{label:'PBC',data:py,backgroundColor:YEARS.map((_,i)=>i===YEARS.length-1?RJ:AZ),borderRadius:5}],{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true},x:{ticks:{font:{size:10}}}}});
 }
 
-function actualizarComunasYEstabs(estabs) {
-  const fCom = document.getElementById('f-comuna');
-  const fEst = document.getElementById('f-estab');
-  const comVal = String(fCom.value);
-  const estVal = String(fEst.value);
+function kpisPBC(fd){
+  const anio=F.anio,ult=YEARS[YEARS.length-1];
+  const yr=anio==='all'?ult:anio;
+  const total=fd.reduce((s,d)=>s+gp(d,yr),0);
+  const nAct=fd.filter(d=>gp(d,yr)>0).length;
+  document.getElementById('p-kpi-total').textContent=fmt(total);
+  document.getElementById('p-kpi-sub').textContent=anio==='all'?'Diciembre '+ult:'Año '+anio;
+  document.getElementById('p-kpi-estab').textContent=fmt(nAct);
+  document.getElementById('p-kpi-prom').textContent=fmt(nAct>0?total/nAct:0);
+  const by=YEARS.map(y=>({y,v:fd.reduce((s,d)=>s+gp(d,y),0)})).sort((a,b)=>b.v-a.v);
+  document.getElementById('p-kpi-best').textContent=by[0].y;
+  document.getElementById('p-kpi-best-val').textContent=fmt(by[0].v)+' personas';
+  const sm={};fd.forEach(d=>{const v=gp(d,yr);sm[d.s]=(sm[d.s]||0)+v;});
+  const top=Object.entries(sm).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('p-kpi-ss').textContent=top?top[0]:'—';
+  document.getElementById('p-kpi-ss-val').textContent=top?fmt(top[1])+' PBC':'';
+  document.getElementById('p-badge').textContent=CTX_STR;
+}
 
-  // Comunas disponibles
-  const comunasDisp = [...new Set(estabs.map(e => String(e[3])))].sort((a,b) =>
-    DATA.lookup.comunas[a].localeCompare(DATA.lookup.comunas[b], 'es')
-  );
+function kpisSev(fd){
+  const anio=F.anio,ult=YEARS[YEARS.length-1];
+  const yr=anio==='all'?ult:(esCat(anio)?anio:ult);
+  const totL=fd.reduce((s,d)=>s+gl(d,yr),0);
+  const totM=fd.reduce((s,d)=>s+gm(d,yr),0);
+  const totA=fd.reduce((s,d)=>s+ga(d,yr),0);
+  const tot=totL+totM+totA;
+  document.getElementById('s-kpi-total').textContent=fmt(tot);
+  document.getElementById('s-kpi-sub').textContent='Año '+yr;
+  document.getElementById('s-kpi-l').textContent=fmt(totL);
+  document.getElementById('s-kpi-l-pct').textContent=tot>0?fmtPct(totL/tot*100):'—';
+  document.getElementById('s-kpi-m').textContent=fmt(totM);
+  document.getElementById('s-kpi-m-pct').textContent=tot>0?fmtPct(totM/tot*100):'—';
+  document.getElementById('s-kpi-a').textContent=fmt(totA);
+  document.getElementById('s-kpi-a-pct').textContent=tot>0?fmtPct(totA/tot*100):'—';
+  document.getElementById('s-kpi-pct-l').textContent=tot>0?fmtPct(totL/tot*100):'—';
+}
 
-  fCom.innerHTML = '<option value="">Todas</option>';
-  comunasDisp.forEach(ci => {
-    const o = document.createElement('option');
-    o.value = ci;
-    o.textContent = DATA.lookup.comunas[ci];
-    if (ci === comVal) o.selected = true;
-    fCom.appendChild(o);
-  });
+function grafPBC(fd){
+  const anio=F.anio,ult=YEARS[YEARS.length-1];
+  const yr=anio==='all'?ult:anio;
+  // Tendencia
+  const py=YEARS.map(y=>fd.reduce((s,d)=>s+gp(d,y),0));
+  mkC('p-c-tend','bar',YEARS,[{label:'PBC',data:py,backgroundColor:YEARS.map((_,i)=>i===YEARS.length-1?RJ:AZ),borderRadius:4}],{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}});
+  // Variación %
+  const vy=YEARS.slice(1).map((y,i)=>{const c=fd.reduce((s,d)=>s+gp(d,y),0),p=fd.reduce((s,d)=>s+gp(d,YEARS[i]),0);return p>0?+((c-p)/p*100).toFixed(1):0;});
+  mkC('p-c-var','bar',YEARS.slice(1),[{label:'Δ%',data:vy,backgroundColor:vy.map(v=>v>=0?VD:RJ),borderRadius:4}],{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+'%'}}}});
+  // SS
+  const sm={};fd.forEach(d=>{sm[d.s]=(sm[d.s]||0)+gp(d,yr);});
+  const sa=Object.entries(sm).sort((a,b)=>b[1]-a[1]);
+  mkC('p-c-ss','bar',sa.map(x=>x[0]),[{label:'PBC',data:sa.map(x=>x[1]),backgroundColor:AZ,borderRadius:3}],{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true},y:{ticks:{font:{size:9}}}}});
+  // Tipo apilado
+  const tipos=[...new Set(fd.map(d=>d.t))].sort();
+  const yrs=anio==='all'?YEARS:[anio];
+  mkC('p-c-tipo','bar',yrs,tipos.map((t,i)=>({label:t,data:yrs.map(y=>fd.filter(d=>d.t===t).reduce((s,d)=>s+gp(d,y),0)),backgroundColor:COLS[i%COLS.length],borderRadius:3,stack:'s'})),{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}});
+  // Dependencia
+  const dm={};fd.forEach(d=>{dm[d.dep.trim()]=(dm[d.dep.trim()]||0)+gp(d,yr);});
+  const da=Object.entries(dm).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+  mkC('p-c-dep','doughnut',da.map(x=>x[0]),[{data:da.map(x=>x[1]),backgroundColor:[AZ,'#25306B',RJ,NR]}],{plugins:{legend:{position:'right',labels:{font:{size:10}}}}});
+  // Top 20
+  const top=[...fd].sort((a,b)=>gp(b,yr)-gp(a,yr)).slice(0,20);
+  document.getElementById('p-sub-top').textContent=CTX_STR+' · '+yr;
+  mkC('p-c-top','bar',top.map(d=>d.n.length>42?d.n.slice(0,40)+'…':d.n),[{label:'PBC',data:top.map(d=>gp(d,yr)),backgroundColor:AZ,borderRadius:4}],{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true},y:{ticks:{font:{size:9}}}}});
+}
 
-  // Si la comuna ya no existe en las opciones disponibles, resetear
-  if (comVal !== '' && !comunasDisp.includes(comVal)) {
-    fCom.value = '';
+function grafSev(fd){
+  const anio=F.anio,ult=YEARS[YEARS.length-1];
+  const yr=anio==='all'?ult:(esCat(anio)?anio:ult);
+  // Evolución L/M/A
+  mkC('s-c-tend','bar',YEARS_CAT,[
+    {label:'Leve',data:YEARS_CAT.map(y=>fd.reduce((s,d)=>s+gl(d,y),0)),backgroundColor:AZ,borderRadius:3,stack:'s'},
+    {label:'Moderada',data:YEARS_CAT.map(y=>fd.reduce((s,d)=>s+gm(d,y),0)),backgroundColor:NR,borderRadius:3,stack:'s'},
+    {label:'Avanzada',data:YEARS_CAT.map(y=>fd.reduce((s,d)=>s+ga(d,y),0)),backgroundColor:RJ,borderRadius:3,stack:'s'}
+  ],{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}});
+  // Dona
+  const tL=fd.reduce((s,d)=>s+gl(d,yr),0),tM=fd.reduce((s,d)=>s+gm(d,yr),0),tA=fd.reduce((s,d)=>s+ga(d,yr),0);
+  mkC('s-c-dona','doughnut',['Leve','Moderada','Avanzada'],[{data:[tL,tM,tA],backgroundColor:[AZ,NR,RJ]}],{plugins:{legend:{position:'right'}}});
+  document.getElementById('s-sub-dona').textContent='Año '+yr;
+  // SS apilado
+  const sm={l:{},m:{},a:{}};
+  fd.forEach(d=>{sm.l[d.s]=(sm.l[d.s]||0)+gl(d,yr);sm.m[d.s]=(sm.m[d.s]||0)+gm(d,yr);sm.a[d.s]=(sm.a[d.s]||0)+ga(d,yr);});
+  const sns=[...new Set(fd.map(d=>d.s))].sort((a,b)=>((sm.l[b]||0)+(sm.m[b]||0)+(sm.a[b]||0))-((sm.l[a]||0)+(sm.m[a]||0)+(sm.a[a]||0)));
+  mkC('s-c-ss','bar',sns,[
+    {label:'Leve',data:sns.map(s=>sm.l[s]||0),backgroundColor:AZ,stack:'s',borderRadius:3},
+    {label:'Moderada',data:sns.map(s=>sm.m[s]||0),backgroundColor:NR,stack:'s',borderRadius:3},
+    {label:'Avanzada',data:sns.map(s=>sm.a[s]||0),backgroundColor:RJ,stack:'s',borderRadius:3}
+  ],{scales:{x:{stacked:true,ticks:{font:{size:9}}},y:{stacked:true,beginAtZero:true}}});
+  document.getElementById('s-sub-ss').textContent='Año '+yr;
+}
+
+function actualizarMapa(fd){
+  if(!mapaLeaflet){
+    mapaLeaflet=L.map('el-mapa').setView([-35.5,-71.0],5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:18}).addTo(mapaLeaflet);
   }
-
-  // Establecimientos filtrados por la comuna activa
-  const comActual = fCom.value;
-  const estabsParaCom = comActual !== ''
-    ? estabs.filter(e => String(e[3]) === comActual)
-    : estabs;
-
-  const estabsSorted = [...estabsParaCom].sort((a,b) => a[1].localeCompare(b[1], 'es'));
-
-  fEst.innerHTML = '<option value="">Todos</option>';
-  estabsSorted.forEach(e => {
-    const o = document.createElement('option');
-    o.value = String(e[0]);
-    o.textContent = e[1];
-    if (String(e[0]) === estVal) o.selected = true;
-    fEst.appendChild(o);
+  marcadores.forEach(m=>mapaLeaflet.removeLayer(m));marcadores=[];
+  const yr=document.getElementById('mapa-year').value||YEARS[YEARS.length-1];
+  fd.forEach(d=>{
+    if(!d.lat||!d.lon)return;
+    const v=gp(d,yr);if(v<=0)return;
+    const radio=Math.max(4,Math.min(22,Math.sqrt(v)*1.8));
+    const color=v>200?RJ:v>50?NR:AZ;
+    const circ=L.circleMarker([d.lat,d.lon],{radius:radio,fillColor:color,color:'#fff',weight:1,fillOpacity:.75});
+    let pop=`<b>${d.n}</b><br>${d.t} · ${d.dep}<br>${d.c} · ${d.s}<br><small>`;
+    YEARS.forEach(a=>{const vp=gp(d,a);if(!vp)return;if(esCat(a))pop+=`<b>${a}:</b> ${vp} (L:${gl(d,a)} M:${gm(d,a)} Av:${ga(d,a)})<br>`;else pop+=`<b>${a}:</b> ${vp}<br>`;});
+    pop+='</small>';
+    circ.bindPopup(pop);circ.addTo(mapaLeaflet);marcadores.push(circ);
   });
-
-  // Si el estab ya no existe en las opciones disponibles, resetear
-  if (estVal !== '' && !estabsSorted.find(e => String(e[0]) === estVal)) {
-    fEst.value = '';
-  }
+  if(marcadores.length>0)mapaLeaflet.fitBounds(L.featureGroup(marcadores).getBounds().pad(.08));
 }
 
-// ─── CONTEXTO TEXTO ─────────────────────────────────────────────
-function textoContexto() {
-  const f = getFiltros();
-  let parts = [];
-  if (f.anio) parts.push('Año ' + f.anio);
-  else parts.push('Todos los años (' + DATA.meta.años[0] + '–' + DATA.meta.años[DATA.meta.años.length-1] + ')');
-  if (f.ss !== '') parts.push(DATA.lookup.ss[f.ss]);
-  else parts.push('Todo el país');
-  if (f.comuna !== '') parts.push('Comuna: ' + DATA.lookup.comunas[f.comuna]);
-  if (f.estab !== '') {
-    const e = DATA.establecimientos.find(x => x[0] == f.estab);
-    if (e) parts.push(e[1]);
-  }
-  if (f.tipo !== '') parts.push('Tipo: ' + DATA.lookup.tipos[f.tipo]);
-  if (f.dep !== '') parts.push('Dep.: ' + DATA.lookup.dependencias[f.dep]);
-  return parts.join(' · ');
-}
-
-// ─── KPIs ───────────────────────────────────────────────────────
-function actualizarKPIs(estabs) {
-  const f = getFiltros();
-  const años = DATA.meta.años;
-
-  let totalPBC = 0;
-  if (f.anio) {
-    estabs.forEach(e => totalPBC += getPBCVal(e[9][f.anio]));
-  } else {
-    // Suma del último año disponible
-    const ultimoAnio = años[años.length - 1];
-    estabs.forEach(e => totalPBC += getPBCVal(e[9][ultimoAnio]));
-  }
-
-  const nEstabs = estabs.length;
-  const nComunas = new Set(estabs.map(e => e[3])).size;
-  const nSS = new Set(estabs.map(e => e[2])).size;
-
-  // Variación 2014→2016
-  const primerAnio = años[0];
-  const ultimoAnioVar = años[años.length - 1];
-  let pbc14 = 0, pbc16 = 0;
-  estabs.forEach(e => {
-    pbc14 += getPBCVal(e[9][primerAnio]);
-    pbc16 += getPBCVal(e[9][ultimoAnioVar]);
-  });
-  let variacion = pbc14 > 0 ? Math.round(((pbc16 - pbc14) / pbc14) * 100) : null;
-
-  const primerA = años[0]; const ultA = años[años.length-1];
-  document.getElementById('kpi-var-label').textContent = 'Variación ' + primerA + '→' + ultA;
-  document.getElementById('kpi-pbc').textContent = totalPBC.toLocaleString('es-CL');
-  document.getElementById('kpi-pbc-sub').textContent = f.anio ? 'Año ' + f.anio : 'Año ' + años[años.length - 1];
-  document.getElementById('kpi-estabs').textContent = nEstabs.toLocaleString('es-CL');
-  document.getElementById('kpi-estabs-sub').textContent = 'con PBC > 1';
-  document.getElementById('kpi-comunas').textContent = nComunas.toLocaleString('es-CL');
-  document.getElementById('kpi-ss').textContent = nSS.toLocaleString('es-CL');
-  if (variacion !== null) {
-    const signo = variacion >= 0 ? '+' : '';
-    document.getElementById('kpi-variacion').textContent = signo + variacion + '%';
-    document.getElementById('kpi-var-sub').textContent = primerAnio + ': ' + pbc14 + ' → ' + ultimoAnioVar + ': ' + pbc16;
-  } else {
-    document.getElementById('kpi-variacion').textContent = 'N/D';
-    document.getElementById('kpi-var-sub').textContent = '';
-  }
-}
-
-// ─── GRÁFICOS ───────────────────────────────────────────────────
-function crearOActualizar(id, tipo, labels, datasets, opciones) {
-  const canvas = document.getElementById(id);
-  if (charts[id]) { charts[id].destroy(); }
-  charts[id] = new Chart(canvas, {
-    type: tipo,
-    data: { labels, datasets },
-    options: { ...opcionesBase(), ...opciones }
-  });
-}
-
-function opcionesBase() {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { labels: { font: { size: 11 }, color: '#333' } },
-      tooltip: { callbacks: { label: ctx => ' ' + ctx.formattedValue } }
-    }
-  };
-}
-
-function actualizarGraficos(estabs) {
-  const f = getFiltros();
-  const ctx = textoContexto();
-  const años = DATA.meta.años;
-
-  // 1. Evolución por año
-  const pbcAnio = años.map(a => estabs.reduce((s, e) => s + getPBCVal(e[9][a]), 0));
-  document.getElementById('sub-evolucion').textContent = ctx;
-  crearOActualizar('chart-evolucion', 'bar', años, [{
-    label: 'PBC Demencia',
-    data: pbcAnio,
-    backgroundColor: COLORES.slice(0, años.length),
-    borderRadius: 5
-  }], {
-    plugins: { legend: { display: false } },
-    scales: {
-      y: { beginAtZero: true, ticks: { font: { size: 10 } } },
-      x: { ticks: { font: { size: 10 } } }
-    }
-  });
-
-  // 2. Por Servicio de Salud
-  const ssMap = {};
-  estabs.forEach(e => {
-    const ss = DATA.lookup.ss[e[2]];
-    const v = f.anio ? getPBCVal(e[9][f.anio]) : getPBCVal(e[9][años[años.length-1]]);
-    ssMap[ss] = (ssMap[ss] || 0) + v;
-  });
-  const ssSorted = Object.entries(ssMap).sort((a,b) => b[1]-a[1]).slice(0, 15);
-  document.getElementById('sub-ss').textContent = ctx;
-  crearOActualizar('chart-ss', 'bar',
-    ssSorted.map(x=>x[0]),
-    [{
-      label: 'PBC', data: ssSorted.map(x=>x[1]),
-      backgroundColor: AZUL, borderRadius: 4
-    }],
-    {
-      indexAxis: 'y',
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { beginAtZero: true, ticks: { font: { size: 9 } } },
-        y: { ticks: { font: { size: 9 } } }
-      }
-    }
-  );
-
-  // 3. Por Tipo
-  const tipoMap = {};
-  estabs.forEach(e => {
-    const t = DATA.lookup.tipos[e[4]];
-    const v = f.anio ? getPBCVal(e[9][f.anio]) : pbcTotalEstab(e);
-    tipoMap[t] = (tipoMap[t] || 0) + v;
-  });
-  const tipoEntries = Object.entries(tipoMap).sort((a,b) => b[1]-a[1]);
-  document.getElementById('sub-tipo').textContent = ctx;
-  crearOActualizar('chart-tipo', 'doughnut',
-    tipoEntries.map(x=>x[0]),
-    [{
-      data: tipoEntries.map(x=>x[1]),
-      backgroundColor: COLORES,
-      borderWidth: 2
-    }],
-    { plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } } }
-  );
-
-  // 4. Por Dependencia
-  const depMap = {};
-  estabs.forEach(e => {
-    const d = DATA.lookup.dependencias[e[5]];
-    const v = f.anio ? getPBCVal(e[9][f.anio]) : pbcTotalEstab(e);
-    depMap[d] = (depMap[d] || 0) + v;
-  });
-  const depEntries = Object.entries(depMap).sort((a,b) => b[1]-a[1]);
-  document.getElementById('sub-dep').textContent = ctx;
-  crearOActualizar('chart-dep', 'pie',
-    depEntries.map(x=>x[0]),
-    [{
-      data: depEntries.map(x=>x[1]),
-      backgroundColor: [AZUL, '#25306B', ROJO, '#2980b9'],
-      borderWidth: 2
-    }],
-    { plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } } }
-  );
-
-  // 5. Categorías severidad (solo años con desagregación)
-  const wrapCat = document.getElementById('wrap-categorias');
-  const añosCat = DATA.meta.años_cat || [];
-  const añosCatActivos = f.anio ? (esCat(f.anio) ? [f.anio] : []) : añosCat;
-  if (añosCatActivos.length > 0) {
-    wrapCat.style.display = 'block';
-    let totL = 0, totM = 0, totA = 0;
-    estabs.forEach(e => {
-      añosCatActivos.forEach(a => {
-        const v = e[9][a];
-        if (v && typeof v === 'object') {
-          totL += v.l || 0; totM += v.m || 0; totA += v.a || 0;
-        }
+function actualizarTabla(fd){
+  const ult=YEARS[YEARS.length-1];
+  const th=document.getElementById('thead-row');
+  th.innerHTML='<th>#</th><th>Establecimiento</th><th>Tipo</th><th>SS</th><th>Comuna</th>';
+  YEARS.forEach(a=>th.innerHTML+=`<th>PBC ${a}</th>`);
+  const sorted=[...fd].sort((a,b)=>gp(b,ult)-gp(a,ult));
+  const tb=document.getElementById('tbody-tabla');tb.innerHTML='';
+  sorted.forEach((d,i)=>{
+    const tc=YEARS_CAT.some(a=>gl(d,a)+gm(d,a)+ga(d,a)>0);
+    const tr=document.createElement('tr');
+    if(tc)tr.classList.add('expandible');
+    let c=`<td class="rank">${i+1}</td><td>${d.n}</td><td>${d.t}</td><td>${d.s}</td><td>${d.c}</td>`;
+    YEARS.forEach(a=>c+=`<td class="num">${gp(d,a)||'–'}</td>`);
+    tr.innerHTML=c;
+    if(tc){tr.addEventListener('click',()=>{
+      tr.classList.toggle('open');
+      const nx=tr.nextSibling;
+      if(nx&&nx.classList&&nx.classList.contains('fila-det')){nx.remove();return;}
+      const det=document.createElement('tr');det.classList.add('fila-det');
+      let h=`<td colspan="${5+YEARS.length}"><div class="cat-grid">`;
+      YEARS_CAT.forEach(a=>{
+        const l=gl(d,a),m=gm(d,a),av=ga(d,a);if(!l&&!m&&!av)return;
+        h+=`<div class="cat-item"><span style="font-size:.7rem;font-weight:700;color:var(--az2);margin-bottom:3px">${a}</span><div style="display:flex;gap:12px">`;
+        h+=`<div class="cat-item"><span class="cat-val" style="color:#005F9E">${l}</span><span class="cat-lbl">Leve</span></div>`;
+        h+=`<div class="cat-item"><span class="cat-val" style="color:#E67E22">${m}</span><span class="cat-lbl">Mod.</span></div>`;
+        h+=`<div class="cat-item"><span class="cat-val" style="color:#C0392B">${av}</span><span class="cat-lbl">Av.</span></div>`;
+        h+=`</div></div>`;
       });
-    });
-    const labelCat = añosCatActivos.length === 1 ? añosCatActivos[0] : añosCatActivos.join(', ');
-    document.getElementById('sub-cat').textContent = ctx + ' · Año(s): ' + labelCat;
-    crearOActualizar('chart-cat', 'bar',
-      ['Leve', 'Moderada', 'Avanzada'],
-      [{
-        label: 'PBC por severidad',
-        data: [totL, totM, totA],
-        backgroundColor: [AZUL, '#e67e22', ROJO],
-        borderRadius: 6
-      }],
-      {
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true }, x: { ticks: { font: { size: 12 } } } }
-      }
-    );
-  } else {
-    wrapCat.style.display = 'none';
-  }
-}
-
-function pbcTotalEstab(e) {
-  return DATA.meta.años.reduce((s, a) => s + getPBCVal(e[9][a]), 0);
-}
-
-// ─── MAPA ───────────────────────────────────────────────────────
-function inicializarMapa() {
-  if (mapaLeaflet) return;
-  mapaLeaflet = L.map('mapa').setView([-35.5, -71.0], 5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap',
-    maxZoom: 18
-  }).addTo(mapaLeaflet);
-}
-
-function actualizarMapa(estabs) {
-  if (!mapaLeaflet) inicializarMapa();
-  marcadores.forEach(m => mapaLeaflet.removeLayer(m));
-  marcadores = [];
-
-  const f = getFiltros();
-  const años = DATA.meta.años;
-  const ultimoAnio = años[años.length - 1];
-
-  estabs.forEach(e => {
-    if (!e[7] || !e[8]) return;
-    const v = f.anio ? getPBCVal(e[9][f.anio]) : getPBCVal(e[9][ultimoAnio]);
-    if (v <= 0) return;
-
-    const radio = Math.max(4, Math.min(20, Math.sqrt(v) * 1.8));
-    const color = v > 200 ? ROJO : v > 50 ? '#e67e22' : AZUL;
-
-    const circ = L.circleMarker([e[7], e[8]], {
-      radius: radio,
-      fillColor: color,
-      color: '#fff',
-      weight: 1,
-      fillOpacity: 0.75
-    });
-
-    const ss = DATA.lookup.ss[e[2]];
-    const com = DATA.lookup.comunas[e[3]];
-    const tipo = DATA.lookup.tipos[e[4]];
-    const dep = DATA.lookup.dependencias[e[5]];
-    const años_txt = DATA.meta.años.map(a => {
-      const v = e[9][a];
-      if (!v && v !== 0) return `<b>${a}:</b> –`;
-      if (typeof v === 'object') return `<b>${a}:</b> ${v.t} <small>(L:${v.l} M:${v.m} Av:${v.a})</small>`;
-      return `<b>${a}:</b> ${v}`;
-    }).join('<br>');
-
-    circ.bindPopup(`
-      <b>${e[1]}</b><br>
-      ${tipo} · ${dep}<br>
-      ${com} · ${ss}<br>
-      <small>PBC: ${años_txt}</small>
-    `);
-    circ.addTo(mapaLeaflet);
-    marcadores.push(circ);
-  });
-
-  if (marcadores.length > 0) {
-    const group = L.featureGroup(marcadores);
-    mapaLeaflet.fitBounds(group.getBounds().pad(0.1));
-  }
-}
-
-// ─── TABLA ──────────────────────────────────────────────────────
-function actualizarTabla(estabs) {
-  const años = DATA.meta.años;
-  const ult = años[años.length - 1];
-  const añosCat = DATA.meta.años_cat || [];
-
-  // Cabecera: siempre solo Total por año (sin columnas L/M/Av)
-  const thead = document.querySelector('#thead-tabla tr');
-  thead.innerHTML = '<th>Establecimiento</th><th>Tipo</th><th>Dependencia</th><th>Comuna</th><th>Servicio de Salud</th>';
-  años.forEach(a => { thead.innerHTML += `<th>PBC ${a}</th>`; });
-
-  const sorted = [...estabs].sort((a,b) => getPBCVal(b[9][ult]) - getPBCVal(a[9][ult]));
-  const tbody = document.getElementById('tbody-tabla');
-  tbody.innerHTML = '';
-
-  sorted.forEach(e => {
-    // Verificar si este estab tiene algún año con categorías
-    const tieneCat = añosCat.some(a => e[9][a] && typeof e[9][a] === 'object');
-
-    // Fila principal
-    let celdas = `<td>${e[1]}</td><td><span class="badge">${DATA.lookup.tipos[e[4]]}</span></td><td>${DATA.lookup.dependencias[e[5]]}</td><td>${DATA.lookup.comunas[e[3]]}</td><td>${DATA.lookup.ss[e[2]]}</td>`;
-    años.forEach(a => {
-      const v = e[9][a];
-      const t = getPBCVal(v);
-      celdas += `<td>${t > 0 ? t : (v !== undefined ? 0 : '–')}</td>`;
-    });
-
-    const tr = document.createElement('tr');
-    if (tieneCat) tr.classList.add('expandible');
-    tr.innerHTML = celdas;
-
-    // Click para expandir categorías
-    if (tieneCat) {
-      tr.addEventListener('click', () => {
-        tr.classList.toggle('abierto');
-        const next = tr.nextSibling;
-        if (next && next.classList && next.classList.contains('fila-detalle')) {
-          next.remove();
-        } else {
-          const trDet = document.createElement('tr');
-          trDet.classList.add('fila-detalle');
-          let html = `<td colspan="${5 + años.length}"><div class="cat-grid">`;
-          añosCat.forEach(a => {
-            const v = e[9][a];
-            if (!v || typeof v !== 'object') return;
-            html += `<div class="cat-item"><span style="font-size:.7rem;font-weight:600;color:#555;margin-bottom:4px">${a}</span>`;
-            html += `<div style="display:flex;gap:14px">`;
-            html += `<div class="cat-item"><span class="cat-val cat-leve">${v.l ?? 0}</span><span class="cat-lbl">Leve</span></div>`;
-            html += `<div class="cat-item"><span class="cat-val cat-mod">${v.m ?? 0}</span><span class="cat-lbl">Mod.</span></div>`;
-            html += `<div class="cat-item"><span class="cat-val cat-av">${v.a ?? 0}</span><span class="cat-lbl">Av.</span></div>`;
-            html += `</div></div>`;
-          });
-          html += '</div></td>';
-          trDet.innerHTML = html;
-          tr.after(trDet);
-        }
-      });
-    }
-    tbody.appendChild(tr);
+      h+='</div></td>';det.innerHTML=h;tr.after(det);
+    });}
+    tb.appendChild(tr);
   });
 }
 
-// ─── FICHA TERRITORIO ───────────────────────────────────────────
-function actualizarFicha(estabs) {
-  const f = getFiltros();
-  const hasSel = f.ss !== '' || f.comuna !== '' || f.estab !== '';
-
-  document.getElementById('sin-seleccion').style.display = hasSel ? 'none' : 'block';
-  document.getElementById('ficha-contenido').style.display = hasSel ? 'block' : 'none';
-  if (!hasSel) return;
-
-  // Titulo
-  let titulo = '';
-  if (f.estab !== '') {
-    const e = DATA.establecimientos.find(x => x[0] == f.estab);
-    titulo = e ? e[1] : 'Establecimiento';
-  } else if (f.comuna !== '') {
-    titulo = 'Comuna: ' + DATA.lookup.comunas[f.comuna];
-  } else if (f.ss !== '') {
-    titulo = 'Servicio de Salud: ' + DATA.lookup.ss[f.ss];
-  }
-  document.getElementById('ficha-titulo').textContent = titulo;
-
-  const años = DATA.meta.años;
-  const ult = años[años.length - 1];
-  const prim = años[0];
-
-  // KPIs
-  const totalUlt = estabs.reduce((s,e) => s + getPBCVal(e[9][ult]), 0);
-  const totalPrim = estabs.reduce((s,e) => s + getPBCVal(e[9][prim]), 0);
-  const variacion = totalPrim > 0 ? Math.round(((totalUlt - totalPrim)/totalPrim)*100) : null;
-  const prom = estabs.length > 0 ? Math.round(totalUlt / estabs.length) : 0;
-
-  document.getElementById('ft-var-lbl').textContent = 'Variación ' + prim + '→' + ult;
-  document.getElementById('ft-pbc-lbl').textContent = 'Total PBC ' + ult + ' (último año)';
-  document.getElementById('ft-pbc').textContent = totalUlt.toLocaleString('es-CL');
-  document.getElementById('ft-estabs').textContent = estabs.length;
-  document.getElementById('ft-prom').textContent = prom;
-  document.getElementById('ft-var').textContent = variacion !== null ? (variacion >= 0 ? '+' : '') + variacion + '%' : 'N/D';
-
-  // Mini gráfico evolución
-  const pbcAnio = años.map(a => estabs.reduce((s,e) => s + getPBCVal(e[9][a]), 0));
-  if (miniCharts['mini-evolucion']) miniCharts['mini-evolucion'].destroy();
-  miniCharts['mini-evolucion'] = new Chart(document.getElementById('mini-evolucion'), {
-    type: 'line',
-    data: { labels: años, datasets: [{ label: 'PBC', data: pbcAnio, borderColor: AZUL, backgroundColor: 'rgba(0,95,158,.15)', fill: true, tension: 0.3, pointRadius: 4 }] },
-    options: { ...opcionesBase(), plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-  });
-
-  // Mini gráfico tipo
-  // Para distribución por tipo: usar el año filtrado o sumar todos los años
-  const tipoMap = {};
-  const añoParaTipo = f.anio || ult;
-  estabs.forEach(e => {
-    const t = DATA.lookup.tipos[e[4]];
-    // Si el estab no tiene dato en el año seleccionado, buscar el mejor año disponible
-    let v = getPBCVal(e[9][añoParaTipo]);
-    if (v === 0 && !f.anio) {
-      // Sin filtro de año: sumar todos los años disponibles
-      v = DATA.meta.años.reduce((s, a) => s + getPBCVal(e[9][a]), 0);
-    }
-    tipoMap[t] = (tipoMap[t]||0) + v;
-  });
-  const tipoE = Object.entries(tipoMap).filter(x => x[1] > 0).sort((a,b) => b[1]-a[1]);
-  if (miniCharts['mini-tipo']) miniCharts['mini-tipo'].destroy();
-  miniCharts['mini-tipo'] = new Chart(document.getElementById('mini-tipo'), {
-    type: 'doughnut',
-    data: { labels: tipoE.map(x=>x[0]), datasets: [{ data: tipoE.map(x=>x[1]), backgroundColor: COLORES }] },
-    options: { ...opcionesBase(), plugins: { legend: { position: 'right', labels: { font: { size: 9 } } } } }
-  });
-
-  // Mini gráfico categorías
-  const añosCat = DATA.meta.años_cat || [];
-  const wrapMiniCat = document.getElementById('wrap-mini-cat');
-  const añosCatDisp = f.anio ? (esCat(f.anio) ? [f.anio] : []) : añosCat;
-  if (añosCatDisp.length > 0) {
-    wrapMiniCat.style.display = 'block';
-    document.getElementById('mini-cat-año').textContent = añosCatDisp.join(', ');
-    let cl = 0, cm = 0, ca = 0;
-    estabs.forEach(e => {
-      añosCatDisp.forEach(a => {
-        const v = e[9][a];
-        if (v && typeof v === 'object') { cl += v.l||0; cm += v.m||0; ca += v.a||0; }
-      });
-    });
-    if (miniCharts['mini-cat']) miniCharts['mini-cat'].destroy();
-    miniCharts['mini-cat'] = new Chart(document.getElementById('mini-cat'), {
-      type: 'doughnut',
-      data: { labels: ['Leve','Moderada','Avanzada'], datasets: [{ data: [cl, cm, ca], backgroundColor: [AZUL,'#e67e22',ROJO] }] },
-      options: { ...opcionesBase(), plugins: { legend: { position: 'right', labels: { font: { size: 9 } } } } }
-    });
-  } else {
-    wrapMiniCat.style.display = 'none';
-  }
-
-  // Top establecimientos
-  const sorted = [...estabs].sort((a,b) => getPBCVal(b[9][ult]) - getPBCVal(a[9][ult])).slice(0,20);
-  const tbody = document.getElementById('tbody-top');
-  tbody.innerHTML = '';
-  // Cabecera dinámica top table
-  const theadTop = document.querySelector('#thead-top tr');
-  theadTop.innerHTML = '<th>Establecimiento</th><th>Tipo</th>';
-  DATA.meta.años.forEach(a => {
-    if (esCat(a)) theadTop.innerHTML += `<th>T ${a}</th><th>L</th><th>M</th><th>Av</th>`;
-    else theadTop.innerHTML += `<th>${a}</th>`;
-  });
-
-  sorted.forEach(e => {
-    let celdas = `<td>${e[1]}</td><td>${DATA.lookup.tipos[e[4]]}</td>`;
-    DATA.meta.años.forEach(a => {
-      const v = e[9][a];
-      if (esCat(a)) {
-        celdas += `<td><b>${v?v.t:'–'}</b></td><td>${v?v.l:'–'}</td><td>${v?v.m:'–'}</td><td>${v?v.a:'–'}</td>`;
-      } else {
-        celdas += `<td>${v??'–'}</td>`;
-      }
-    });
-    const tr = document.createElement('tr');
-    tr.innerHTML = celdas;
-    tbody.appendChild(tr);
+function actualizarFicha(fd){
+  const hasSel=F.ss||F.comuna||F.estab;
+  document.getElementById('sin-seleccion').style.display=hasSel?'none':'block';
+  document.getElementById('ficha-contenido').style.display=hasSel?'block':'none';
+  if(!hasSel)return;
+  let titulo='',sub='',icon='🗺️';
+  if(F.estab){const d=DATA.find(x=>String(x.id)===F.estab);titulo=d?d.n:'Establecimiento';sub=d?`${d.t} · ${d.c} · ${d.s}`:'';icon='🏥';}
+  else if(F.comuna){titulo='Comuna: '+F.comuna;sub=F.ss||'';icon='🏘️';}
+  else if(F.ss){titulo=F.ss;sub='Servicio de Salud';icon='🏛️';}
+  document.getElementById('ficha-icon').textContent=icon;
+  document.getElementById('ficha-nombre').textContent=titulo;
+  document.getElementById('ficha-sub').textContent=sub;
+  const ult=YEARS[YEARS.length-1],pri=YEARS[0];
+  const tU=fd.reduce((s,d)=>s+gp(d,ult),0),tP=fd.reduce((s,d)=>s+gp(d,pri),0);
+  const vp=tP>0?((tU-tP)/tP*100):null;
+  const prom=fd.length>0?Math.round(tU/fd.length):0;
+  document.getElementById('ft-pbc-lbl').textContent='PBC '+ult;
+  document.getElementById('ft-var-lbl').textContent='Variación '+pri+'→'+ult;
+  document.getElementById('ft-pbc').textContent=fmt(tU);
+  document.getElementById('ft-estab').textContent=fd.length;
+  document.getElementById('ft-prom').textContent=fmt(prom);
+  document.getElementById('ft-var').textContent=vp!==null?(vp>=0?'+':'')+vp.toFixed(0)+'%':'N/D';
+  // Mini evolución
+  mkM('ft-c-tend','line',YEARS,[{label:'PBC',data:YEARS.map(y=>fd.reduce((s,d)=>s+gp(d,y),0)),borderColor:AZ,backgroundColor:'rgba(0,95,158,.15)',fill:true,tension:.3,pointRadius:3}],{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}});
+  // Mini tipo
+  const tm={};fd.forEach(d=>{tm[d.t]=(tm[d.t]||0)+gp(d,ult);});
+  const te=Object.entries(tm).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+  mkM('ft-c-tipo','doughnut',te.map(x=>x[0]),[{data:te.map(x=>x[1]),backgroundColor:COLS}],{plugins:{legend:{position:'right',labels:{font:{size:9}}}}});
+  // Mini severidad
+  const yr=F.anio==='all'?ult:(esCat(F.anio)?F.anio:ult);
+  document.getElementById('ft-sev-año').textContent=yr;
+  const tL=fd.reduce((s,d)=>s+gl(d,yr),0),tM=fd.reduce((s,d)=>s+gm(d,yr),0),tA=fd.reduce((s,d)=>s+ga(d,yr),0);
+  mkM('ft-c-sev','doughnut',['Leve','Moderada','Avanzada'],[{data:[tL,tM,tA],backgroundColor:[AZ,NR,RJ]}],{plugins:{legend:{position:'right',labels:{font:{size:9}}}}});
+  // Mini dep
+  const dm={};fd.forEach(d=>{dm[d.dep.trim()]=(dm[d.dep.trim()]||0)+gp(d,ult);});
+  const de=Object.entries(dm).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+  mkM('ft-c-dep','doughnut',de.map(x=>x[0]),[{data:de.map(x=>x[1]),backgroundColor:[AZ,'#25306B',RJ,NR]}],{plugins:{legend:{position:'right',labels:{font:{size:9}}}}});
+  // Top tabla
+  const fth=document.getElementById('ft-thead-row');
+  fth.innerHTML='<th>#</th><th>Establecimiento</th><th>Tipo</th>';
+  YEARS.forEach(a=>fth.innerHTML+=`<th>${a}</th>`);
+  const sorted=[...fd].sort((a,b)=>gp(b,ult)-gp(a,ult)).slice(0,30);
+  const ftb=document.getElementById('ft-tbody');ftb.innerHTML='';
+  sorted.forEach((d,i)=>{
+    const tr=document.createElement('tr');
+    let c=`<td class="rank">${i+1}</td><td>${d.n}</td><td>${d.t}</td>`;
+    YEARS.forEach(a=>c+=`<td class="num">${gp(d,a)||'–'}</td>`);
+    tr.innerHTML=c;ftb.appendChild(tr);
   });
 }
 
-// ─── DESCARGA PNG ───────────────────────────────────────────────
-function descargarPNG(canvasId, titulo) {
-  const original = document.getElementById(canvasId);
-  const ctx2 = textoContexto();
-  const margen = 80;
-  const tmp = document.createElement('canvas');
-  tmp.width = original.width;
-  tmp.height = original.height + margen;
-  const ctx = tmp.getContext('2d');
-
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, tmp.width, tmp.height);
-
-  // Header
-  ctx.fillStyle = '#25306B';
-  ctx.fillRect(0, 0, tmp.width, 50);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 13px Arial';
-  ctx.fillText(titulo, 12, 20);
-  ctx.font = '10px Arial';
-  ctx.fillText(ctx2, 12, 36);
-  ctx.font = '9px Arial';
-  ctx.fillText('DIVAP · MINSAL · Chile', tmp.width - 160, 20);
-
-  ctx.drawImage(original, 0, margen);
-  const link = document.createElement('a');
-  link.download = titulo.replace(/\s+/g,'_') + '.png';
-  link.href = tmp.toDataURL('image/png');
-  link.click();
+function mkC(id,tipo,labels,datasets,opts={}){
+  if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(document.getElementById(id),{type:tipo,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},color:'#333'}},tooltip:{callbacks:{label:ctx=>' '+ctx.formattedValue}}},...opts}});
 }
-
-// ─── ACTUALIZAR TODO ─────────────────────────────────────────────
-function actualizarTodo() {
-  const todosEstabs = DATA.establecimientos;
-
-  // Filtro previo sin estab para cascada
-  const f = getFiltros();
-  const sinEstab = todosEstabs.filter(e => {
-    if (f.ss !== '' && String(e[2]) !== f.ss) return false;
-    if (f.tipo !== '' && String(e[4]) !== f.tipo) return false;
-    if (f.dep !== '' && String(e[5]) !== f.dep) return false;
-    return true;
-  });
-  actualizarComunasYEstabs(sinEstab);
-
-  const estabs = getEstabsFiltrados();
-  document.getElementById('contexto-filtros').textContent = 'Mostrando: ' + textoContexto();
-
-  actualizarKPIs(estabs);
-  actualizarGraficos(estabs);
-  actualizarTabla(estabs);
-  actualizarFicha(estabs);
-
-  // Mapa solo si tab activo
-  if (document.getElementById('panel-mapa').classList.contains('activo')) {
-    actualizarMapa(estabs);
-  }
+function mkM(id,tipo,labels,datasets,opts={}){
+  if(miniCharts[id])miniCharts[id].destroy();
+  miniCharts[id]=new Chart(document.getElementById(id),{type:tipo,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:9},color:'#333'}}},...opts}});
 }
-
-// ─── EVENTOS ────────────────────────────────────────────────────
-function bindEventos() {
-  ['f-anio','f-ss','f-comuna','f-estab','f-tipo','f-dep'].forEach(id => {
-    document.getElementById(id).addEventListener('change', actualizarTodo);
-  });
-
-  document.getElementById('btn-limpiar').addEventListener('click', () => {
-    ['f-anio','f-ss','f-tipo','f-dep'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
-    // Resetear también los dependientes de cascada
-    document.getElementById('f-comuna').innerHTML = '<option value="">Todas</option>';
-    document.getElementById('f-estab').innerHTML = '<option value="">Todos</option>';
-    actualizarTodo();
-  });
-
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('activo'));
-      document.querySelectorAll('.panel').forEach(p => p.classList.remove('activo'));
-      tab.classList.add('activo');
-      const panel = document.getElementById(tab.dataset.panel);
-      panel.classList.add('activo');
-      if (tab.dataset.panel === 'panel-mapa') {
-        const estabs = getEstabsFiltrados();
-        actualizarMapa(estabs);
-        setTimeout(() => mapaLeaflet && mapaLeaflet.invalidateSize(), 100);
-      }
-    });
-  });
+function downloadNearestChart(btn){
+  const card=btn.closest('.chart-card');const canvas=card.querySelector('canvas');if(!canvas)return;
+  const titulo=card.querySelector('.chart-title')?.textContent||'Gráfico';
+  const tmp=document.createElement('canvas');const m=60;
+  tmp.width=canvas.width;tmp.height=canvas.height+m;
+  const ctx=tmp.getContext('2d');
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,tmp.width,tmp.height);
+  ctx.fillStyle='#25306B';ctx.fillRect(0,0,tmp.width,m-4);
+  ctx.fillStyle='#ffffff';ctx.font='bold 12px Arial';ctx.fillText(titulo,12,18);
+  ctx.font='10px Arial';ctx.fillText(CTX_STR,12,32);ctx.fillText('DIVAP · MINSAL · Chile',12,46);
+  ctx.drawImage(canvas,0,m);
+  const a=document.createElement('a');a.download=titulo.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'')+'.png';
+  a.href=tmp.toDataURL('image/png');a.click();
 }
 </script>
 </body>
