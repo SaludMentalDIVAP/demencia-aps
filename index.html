@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 :root{
   --az1:#003F6B;--az2:#005F9E;--az3:#0090D0;
@@ -298,7 +297,7 @@ tr.expandible.open td:first-child::before{content:'▼ ';color:var(--az2)}
 <!-- TAB TABLA -->
 <div class="tab-content" id="tab-tabla"><div class="main">
   <div class="chart-card">
-    <div class="chart-header"><div><div class="chart-title">Tabla de Establecimientos</div><div class="chart-sub">PBC por año · Clic en fila para ver desglose de severidad (▶)</div></div><button class="btn-xlsx" onclick="descargarExcel()">📥 Excel</button></div>
+    <div class="chart-header"><div><div class="chart-title">Tabla de Establecimientos</div><div class="chart-sub">PBC por año · Clic en fila para ver desglose de severidad (▶)</div></div><button class="btn-xlsx" onclick="descargarExcel()">📥 CSV</button></div>
     <div class="tabla-wrap"><table><thead><tr id="thead-row"></tr></thead><tbody id="tbody-tabla"></tbody></table></div>
   </div>
 </div></div>
@@ -322,7 +321,7 @@ tr.expandible.open td:first-child::before{content:'▼ ';color:var(--az2)}
           <div class="chart-card" style="box-shadow:none;border:1.5px solid var(--gris-borde)"><div class="chart-title" style="margin-bottom:8px">Severidad <span id="ft-sev-año"></span></div><div class="cw" style="min-height:180px"><canvas id="ft-c-sev"></canvas></div></div>
           <div class="chart-card" style="box-shadow:none;border:1.5px solid var(--gris-borde)"><div class="chart-title" style="margin-bottom:8px">PBC por Dependencia</div><div class="cw" style="min-height:180px"><canvas id="ft-c-dep"></canvas></div></div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div class="sec-title" style="margin-bottom:0">🏆 Top Establecimientos</div><button class="btn-xlsx" onclick="descargarExcelFicha()">📥 Excel</button></div><div class="sec-sep"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div class="sec-title" style="margin-bottom:0">🏆 Top Establecimientos</div><button class="btn-xlsx" onclick="descargarExcelFicha()">📥 CSV</button></div><div class="sec-sep"></div>
         <div class="tabla-wrap" style="max-height:280px"><table><thead><tr id="ft-thead-row"></tr></thead><tbody id="ft-tbody"></tbody></table></div>
       </div>
     </div>
@@ -668,87 +667,67 @@ function mkM(id,tipo,labels,datasets,opts={}){
   if(miniCharts[id])miniCharts[id].destroy();
   miniCharts[id]=new Chart(document.getElementById(id),{type:tipo,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:9},color:'#333'}}},...opts}});
 }
-function descargarExcel(){
-  if(typeof XLSX === 'undefined'){ alert('Error: librería Excel no disponible. Verifica tu conexión a internet.'); return; }
-  const ult=YEARS[YEARS.length-1];
-  const fd=filteredData();
-  const sorted=[...fd].sort((a,b)=>gp(b,ult)-gp(a,ult));
+function buildCSV(rows, headers){
+  const esc = v => {
+    const s = String(v === null || v === undefined ? '' : v);
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  return [headers, ...rows].map(r => r.map(esc).join(',')).join('\r\n');
+}
 
-  // Cabecera
-  const headers=['#','Establecimiento','Tipo','Dependencia','SS','Comuna','Latitud','Longitud'];
+function descargarCSV(csv, nombre){
+  const bom = '\uFEFF'; // BOM para que Excel abra bien con tildes
+  const blob = new Blob([bom + csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombre + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function buildHeaders(conCoordenadas){
+  const h = ['#','Establecimiento','Tipo','Dependencia','Servicio de Salud','Comuna'];
+  if(conCoordenadas){ h.push('Latitud'); h.push('Longitud'); }
   YEARS.forEach(a=>{
-    headers.push('PBC '+a);
-    if(esCat(a)){headers.push('Leve '+a);headers.push('Moderada '+a);headers.push('Avanzada '+a);}
+    h.push('PBC_'+a);
+    if(esCat(a)){ h.push('Leve_'+a); h.push('Moderada_'+a); h.push('Avanzada_'+a); }
   });
+  return h;
+}
 
-  const rows=sorted.map((d,i)=>{
-    const row=[i+1,d.n,d.t,d.dep.trim(),d.s,d.c,d.lat,d.lon];
-    YEARS.forEach(a=>{
-      row.push(gp(d,a)||0);
-      if(esCat(a)){row.push(gl(d,a)||0);row.push(gm(d,a)||0);row.push(ga(d,a)||0);}
-    });
-    return row;
+function buildRow(d, i, conCoordenadas){
+  const row = [i+1, d.n, d.t, d.dep.trim(), d.s, d.c];
+  if(conCoordenadas){ row.push(d.lat||''); row.push(d.lon||''); }
+  YEARS.forEach(a=>{
+    row.push(gp(d,a)||0);
+    if(esCat(a)){ row.push(gl(d,a)||0); row.push(gm(d,a)||0); row.push(ga(d,a)||0); }
   });
+  return row;
+}
 
-  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
-  // Ancho de columnas
-  ws['!cols']=[{wch:4},{wch:45},{wch:12},{wch:16},{wch:28},{wch:20},{wch:10},{wch:10},...YEARS.flatMap(a=>esCat(a)?[{wch:10},{wch:10},{wch:12},{wch:12}]:[{wch:10}])];
-
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,'PBC Demencias',ws);
-
-  // Hoja de metadatos
-  const meta=[
-    ['Dashboard de Abordaje de las Demencias en APS'],
-    ['DIVAP · Ministerio de Salud de Chile'],
-    [''],
-    ['Filtros aplicados:'],
-    ['Año',F.anio==='all'?'Todos':F.anio],
-    ['Servicio de Salud',F.ss||'Todos'],
-    ['Comuna',F.comuna||'Todas'],
-    ['Establecimiento',F.estab?DATA.find(x=>String(x.id)===F.estab)?.n||F.estab:'Todos'],
-    ['Tipo',F.tipo||'Todos'],
-    ['Dependencia',F.dep||'Todas'],
-    [''],
-    ['Contexto',CTX_STR],
-    ['Establecimientos exportados',sorted.length],
-    ['Exportado el',new Date().toLocaleString('es-CL')],
-  ];
-  const wsMeta=XLSX.utils.aoa_to_sheet(meta);
-  wsMeta['!cols']=[{wch:28},{wch:50}];
-  XLSX.utils.book_append_sheet(wb,'Información',wsMeta);
-
-  const fname='PBC_Demencias_'+CTX_STR.replace(/[^a-zA-Z0-9À-ɏ]/g,'_').slice(0,60)+'.xlsx';
-  XLSX.writeFile(wb,fname);
+function descargarExcel(){
+  const ult = YEARS[YEARS.length-1];
+  const fd = filteredData();
+  const sorted = [...fd].sort((a,b)=>gp(b,ult)-gp(a,ult));
+  const headers = buildHeaders(true);
+  const rows = sorted.map((d,i)=>buildRow(d,i,true));
+  const csv = buildCSV(rows, headers);
+  const fname = 'PBC_Demencias_' + CTX_STR.replace(/[^\w\s\-]/g,'').replace(/\s+/g,'_').slice(0,50);
+  descargarCSV(csv, fname);
 }
 
 function descargarExcelFicha(){
-  if(typeof XLSX === 'undefined'){ alert('Error: librería Excel no disponible. Verifica tu conexión a internet.'); return; }
-  const ult=YEARS[YEARS.length-1];
-  const fd=filteredData();
-  const sorted=[...fd].sort((a,b)=>gp(b,ult)-gp(a,ult));
-
-  const headers=['#','Establecimiento','Tipo','Dependencia','SS','Comuna'];
-  YEARS.forEach(a=>{
-    headers.push('PBC '+a);
-    if(esCat(a)){headers.push('Leve '+a);headers.push('Moderada '+a);headers.push('Avanzada '+a);}
-  });
-
-  const rows=sorted.map((d,i)=>{
-    const row=[i+1,d.n,d.t,d.dep.trim(),d.s,d.c];
-    YEARS.forEach(a=>{
-      row.push(gp(d,a)||0);
-      if(esCat(a)){row.push(gl(d,a)||0);row.push(gm(d,a)||0);row.push(ga(d,a)||0);}
-    });
-    return row;
-  });
-
-  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
-  ws['!cols']=[{wch:4},{wch:45},{wch:12},{wch:16},{wch:28},{wch:20},...YEARS.flatMap(a=>esCat(a)?[{wch:10},{wch:10},{wch:12},{wch:12}]:[{wch:10}])];
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,'Territorio',ws);
-  const fname='Territorio_'+CTX_STR.replace(/[^a-zA-Z0-9À-ɏ]/g,'_').slice(0,60)+'.xlsx';
-  XLSX.writeFile(wb,fname);
+  const ult = YEARS[YEARS.length-1];
+  const fd = filteredData();
+  const sorted = [...fd].sort((a,b)=>gp(b,ult)-gp(a,ult));
+  const headers = buildHeaders(false);
+  const rows = sorted.map((d,i)=>buildRow(d,i,false));
+  const csv = buildCSV(rows, headers);
+  const fname = 'Territorio_' + CTX_STR.replace(/[^\w\s\-]/g,'').replace(/\s+/g,'_').slice(0,50);
+  descargarCSV(csv, fname);
 }
 
 function downloadNearestChart(btn){
