@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --az1:#003F6B;--az2:#005F9E;--az3:#0090D0;
@@ -68,6 +69,8 @@ select.filtro:focus{border-color:var(--az2);background:#fff}
 .chart-badge{background:var(--celeste);color:var(--az2);font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
 .btn-png{background:#fff;border:1.5px solid #D0DCE8;border-radius:8px;padding:3px 8px;font-size:10px;font-weight:600;color:#4A6080;cursor:pointer;display:flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;flex-shrink:0}
 .btn-png:hover{background:#EBF5FF;border-color:var(--az2);color:var(--az2)}
+.btn-xlsx{background:#fff;border:1.5px solid #1a7431;border-radius:8px;padding:3px 8px;font-size:10px;font-weight:600;color:#1a7431;cursor:pointer;display:flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.btn-xlsx:hover{background:#e8f5e9;border-color:#145a27;color:#145a27}
 .cw{flex:1;position:relative;min-height:200px}
 .cw.t{min-height:280px}.cw.xt{min-height:360px}.cw.xxl{min-height:440px}
 .mapa-cont{border-radius:8px;overflow:hidden;position:relative}
@@ -252,6 +255,7 @@ tr.expandible.open td:first-child::before{content:'▼ ';color:var(--az2)}
     <div class="kpi-card naranja"><div class="kpi-icon">📊</div><div class="kpi-label">% Leve del total</div><div class="kpi-value sm" id="s-kpi-pct-l">—</div><div class="kpi-sub">Proporción leve</div></div>
   </div>
   <div class="sec-title">📊 Distribución por Severidad</div><div class="sec-sep"></div>
+  <div id="sev-nota" style="background:var(--celeste);border:1.5px solid var(--az3);border-radius:8px;padding:8px 14px;font-size:11px;color:var(--az1);margin-bottom:14px;display:none">ℹ️ Al seleccionar <strong>Todos los años</strong>, los datos de severidad corresponden al <strong>último año disponible (2025)</strong>. Usa el filtro de Año para ver un año específico.</div>
   <div class="charts-grid g2">
     <div class="chart-card">
       <div class="chart-header"><div><div class="chart-title">Evolución PBC por Severidad (2017–2025)</div><div class="chart-sub">Leve / Moderada / Avanzada — apilado</div></div><button class="btn-png" onclick="downloadNearestChart(this)">📥 PNG</button></div>
@@ -294,7 +298,7 @@ tr.expandible.open td:first-child::before{content:'▼ ';color:var(--az2)}
 <!-- TAB TABLA -->
 <div class="tab-content" id="tab-tabla"><div class="main">
   <div class="chart-card">
-    <div class="chart-header"><div><div class="chart-title">Tabla de Establecimientos</div><div class="chart-sub">PBC por año · Clic en fila para ver desglose de severidad (▶)</div></div></div>
+    <div class="chart-header"><div><div class="chart-title">Tabla de Establecimientos</div><div class="chart-sub">PBC por año · Clic en fila para ver desglose de severidad (▶)</div></div><button class="btn-xlsx" onclick="descargarExcel()">📥 Excel</button></div>
     <div class="tabla-wrap"><table><thead><tr id="thead-row"></tr></thead><tbody id="tbody-tabla"></tbody></table></div>
   </div>
 </div></div>
@@ -318,7 +322,7 @@ tr.expandible.open td:first-child::before{content:'▼ ';color:var(--az2)}
           <div class="chart-card" style="box-shadow:none;border:1.5px solid var(--gris-borde)"><div class="chart-title" style="margin-bottom:8px">Severidad <span id="ft-sev-año"></span></div><div class="cw" style="min-height:180px"><canvas id="ft-c-sev"></canvas></div></div>
           <div class="chart-card" style="box-shadow:none;border:1.5px solid var(--gris-borde)"><div class="chart-title" style="margin-bottom:8px">PBC por Dependencia</div><div class="cw" style="min-height:180px"><canvas id="ft-c-dep"></canvas></div></div>
         </div>
-        <div class="sec-title">🏆 Top Establecimientos</div><div class="sec-sep"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div class="sec-title" style="margin-bottom:0">🏆 Top Establecimientos</div><button class="btn-xlsx" onclick="descargarExcelFicha()">📥 Excel</button></div><div class="sec-sep"></div>
         <div class="tabla-wrap" style="max-height:280px"><table><thead><tr id="ft-thead-row"></tr></thead><tbody id="ft-tbody"></tbody></table></div>
       </div>
     </div>
@@ -438,6 +442,8 @@ function actualizarTodo(){
   if(F.dep)parts.push(F.dep);
   CTX_STR=parts.join(' · ');
   document.getElementById('filtros-count').textContent=fd.length.toLocaleString('es-CL')+' establecimientos';
+  const sevNota=document.getElementById('sev-nota');
+  if(sevNota) sevNota.style.display=F.anio==='all'?'block':'none';
   kpisHome(fd);kpisPBC(fd);kpisSev(fd);
   grafPBC(fd);grafSev(fd);
   actualizarTabla(fd);actualizarFicha(fd);
@@ -485,13 +491,14 @@ function kpisSev(fd){
   const totA=fd.reduce((s,d)=>s+ga(d,yr),0);
   const tot=totL+totM+totA;
   document.getElementById('s-kpi-total').textContent=fmt(tot);
-  document.getElementById('s-kpi-sub').textContent='Año '+yr;
+  document.getElementById('s-kpi-sub').textContent=(F.anio==='all'?'Último año disponible: ':'Año ')+yr;
+  const yrLbl=(F.anio==='all'?yr+' (último)':yr);
   document.getElementById('s-kpi-l').textContent=fmt(totL);
-  document.getElementById('s-kpi-l-pct').textContent=tot>0?fmtPct(totL/tot*100):'—';
+  document.getElementById('s-kpi-l-pct').textContent=(tot>0?fmtPct(totL/tot*100):'—')+' · '+yrLbl;
   document.getElementById('s-kpi-m').textContent=fmt(totM);
-  document.getElementById('s-kpi-m-pct').textContent=tot>0?fmtPct(totM/tot*100):'—';
+  document.getElementById('s-kpi-m-pct').textContent=(tot>0?fmtPct(totM/tot*100):'—')+' · '+yrLbl;
   document.getElementById('s-kpi-a').textContent=fmt(totA);
-  document.getElementById('s-kpi-a-pct').textContent=tot>0?fmtPct(totA/tot*100):'—';
+  document.getElementById('s-kpi-a-pct').textContent=(tot>0?fmtPct(totA/tot*100):'—')+' · '+yrLbl;
   document.getElementById('s-kpi-pct-l').textContent=tot>0?fmtPct(totL/tot*100):'—';
 }
 
@@ -661,6 +668,87 @@ function mkM(id,tipo,labels,datasets,opts={}){
   if(miniCharts[id])miniCharts[id].destroy();
   miniCharts[id]=new Chart(document.getElementById(id),{type:tipo,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:9},color:'#333'}}},...opts}});
 }
+function descargarExcel(){
+  const ult=YEARS[YEARS.length-1];
+  const fd=filteredData();
+  const sorted=[...fd].sort((a,b)=>gp(b,ult)-gp(a,ult));
+
+  // Cabecera
+  const headers=['#','Establecimiento','Tipo','Dependencia','SS','Comuna','Latitud','Longitud'];
+  YEARS.forEach(a=>{
+    headers.push('PBC '+a);
+    if(esCat(a)){headers.push('Leve '+a);headers.push('Moderada '+a);headers.push('Avanzada '+a);}
+  });
+
+  const rows=sorted.map((d,i)=>{
+    const row=[i+1,d.n,d.t,d.dep.trim(),d.s,d.c,d.lat,d.lon];
+    YEARS.forEach(a=>{
+      row.push(gp(d,a)||0);
+      if(esCat(a)){row.push(gl(d,a)||0);row.push(gm(d,a)||0);row.push(ga(d,a)||0);}
+    });
+    return row;
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  // Ancho de columnas
+  ws['!cols']=[{wch:4},{wch:45},{wch:12},{wch:16},{wch:28},{wch:20},{wch:10},{wch:10},...YEARS.flatMap(a=>esCat(a)?[{wch:10},{wch:10},{wch:12},{wch:12}]:[{wch:10}])];
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,'PBC Demencias',ws);
+
+  // Hoja de metadatos
+  const meta=[
+    ['Dashboard de Abordaje de las Demencias en APS'],
+    ['DIVAP · Ministerio de Salud de Chile'],
+    [''],
+    ['Filtros aplicados:'],
+    ['Año',F.anio==='all'?'Todos':F.anio],
+    ['Servicio de Salud',F.ss||'Todos'],
+    ['Comuna',F.comuna||'Todas'],
+    ['Establecimiento',F.estab?DATA.find(x=>String(x.id)===F.estab)?.n||F.estab:'Todos'],
+    ['Tipo',F.tipo||'Todos'],
+    ['Dependencia',F.dep||'Todas'],
+    [''],
+    ['Contexto',CTX_STR],
+    ['Establecimientos exportados',sorted.length],
+    ['Exportado el',new Date().toLocaleString('es-CL')],
+  ];
+  const wsMeta=XLSX.utils.aoa_to_sheet(meta);
+  wsMeta['!cols']=[{wch:28},{wch:50}];
+  XLSX.utils.book_append_sheet(wb,'Información',wsMeta);
+
+  const fname='PBC_Demencias_'+CTX_STR.replace(/[^a-zA-Z0-9À-ɏ]/g,'_').slice(0,60)+'.xlsx';
+  XLSX.writeFile(wb,fname);
+}
+
+function descargarExcelFicha(){
+  const ult=YEARS[YEARS.length-1];
+  const fd=filteredData();
+  const sorted=[...fd].sort((a,b)=>gp(b,ult)-gp(a,ult));
+
+  const headers=['#','Establecimiento','Tipo','Dependencia','SS','Comuna'];
+  YEARS.forEach(a=>{
+    headers.push('PBC '+a);
+    if(esCat(a)){headers.push('Leve '+a);headers.push('Moderada '+a);headers.push('Avanzada '+a);}
+  });
+
+  const rows=sorted.map((d,i)=>{
+    const row=[i+1,d.n,d.t,d.dep.trim(),d.s,d.c];
+    YEARS.forEach(a=>{
+      row.push(gp(d,a)||0);
+      if(esCat(a)){row.push(gl(d,a)||0);row.push(gm(d,a)||0);row.push(ga(d,a)||0);}
+    });
+    return row;
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!cols']=[{wch:4},{wch:45},{wch:12},{wch:16},{wch:28},{wch:20},...YEARS.flatMap(a=>esCat(a)?[{wch:10},{wch:10},{wch:12},{wch:12}]:[{wch:10}])];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,'Territorio',ws);
+  const fname='Territorio_'+CTX_STR.replace(/[^a-zA-Z0-9À-ɏ]/g,'_').slice(0,60)+'.xlsx';
+  XLSX.writeFile(wb,fname);
+}
+
 function downloadNearestChart(btn){
   const card=btn.closest('.chart-card');const canvas=card.querySelector('canvas');if(!canvas)return;
   const titulo=card.querySelector('.chart-title')?.textContent||'Gráfico';
