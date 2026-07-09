@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 :root{
   --az1:#003F6B;--az2:#005F9E;--az3:#0090D0;
@@ -669,6 +669,7 @@ function mkM(id,tipo,labels,datasets,opts={}){
   miniCharts[id]=new Chart(document.getElementById(id),{type:tipo,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:9},color:'#333'}}},...opts}});
 }
 function descargarExcel(){
+  if(typeof XLSX === 'undefined'){ alert('Error: librería Excel no disponible. Verifica tu conexión a internet.'); return; }
   const ult=YEARS[YEARS.length-1];
   const fd=filteredData();
   const sorted=[...fd].sort((a,b)=>gp(b,ult)-gp(a,ult));
@@ -722,6 +723,7 @@ function descargarExcel(){
 }
 
 function descargarExcelFicha(){
+  if(typeof XLSX === 'undefined'){ alert('Error: librería Excel no disponible. Verifica tu conexión a internet.'); return; }
   const ult=YEARS[YEARS.length-1];
   const fd=filteredData();
   const sorted=[...fd].sort((a,b)=>gp(b,ult)-gp(a,ult));
